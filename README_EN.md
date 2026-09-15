@@ -2,7 +2,7 @@
 
 [简体中文](README.md) | **English**
 
-Minecraft 1.20.1 · Forge mod · v1.3.0
+Minecraft 1.20.1 · Forge mod · v1.3.1
 
 > Mod ID: `stackablepotionsplus` | Based on [Stackable Potions](https://modrinth.com/mod/stackablepotions) by CursedFlames (MIT)
 
@@ -51,7 +51,7 @@ the stronger you get" playstyle.
 | Infinite duration (effects never expire) | Off | ✅ `infiniteDuration` |
 | Negative effects also stack | Off (vanilla behaviour kept) | ✅ `stackNegativeEffects` |
 | Instant effect short-window stacking (heal/damage) | Off | ✅ `enableInstantStacking` + `instantStackWindowSeconds` |
-| Numeric display for high effect levels | Levels above X shown as Arabic numerals | Fixed |
+| Numeric display for high effect levels | Levels above 10 shown as Arabic numerals | Fixed |
 
 ---
 
@@ -61,7 +61,7 @@ the stronger you get" playstyle.
 - Minecraft Forge **47.x** (declared as `[46,)`; use 47.1.0+ on 1.20.1)
 - No other dependencies
 
-Drop `StackablePotionsPlus-1.20.1-1.3.0.jar` into your `mods` folder.
+Drop `StackablePotionsPlus-1.20.1-1.3.1.jar` into your `mods` folder.
 
 > ⚠️ **Not compatible with the original mod.** This mod uses its own ID `stackablepotionsplus`.
 > Do **not** install it alongside the original Stackable Potions — both modify `Items` registration
@@ -166,9 +166,9 @@ getting stronger each time. Drinking, splash and lingering paths all work.
 
 ### 6. High level display
 
-The vanilla inventory effect panel only renders levels 1–X as Roman numerals; **levels above X lose
-their label entirely**. This mod fixes that: levels up to X keep the Roman numeral look, and
-**anything above X is shown as an Arabic numeral** (11, 25, …), so raising `maxAmplifier` stays
+The vanilla inventory effect panel only renders levels 1–10 as Roman numerals; **levels above 10 lose
+their label entirely**. This mod fixes that: levels up to 10 keep the Roman numeral look, and
+**anything above 10 is shown as an Arabic numeral** (11, 25, …), so raising `maxAmplifier` stays
 readable.
 
 ---
@@ -177,6 +177,7 @@ readable.
 
 | Version | Notes |
 |---|---|
+| **1.3.1** | New mod icon (no longer reusing the original mod's art); the description, author and credits shown in the mod list are now Chinese and more concise |
 | **1.3.0** | **Independent mod ID**: `stackablepotions` → `stackablepotionsplus`, package renamed to `lingyaocangxuan.stackablepotionsplus`, display name is now "Stackable Potions Plus". No longer clashes with the original mod's ID. MIT compliance completed: added `LICENSE.txt` (bundled into the jar under `META-INF/`), and `authors` / `credits` now credit both the original author and the porter. **Note: the config file is now `config/stackablepotionsplus-common.toml`; the old file is no longer read** |
 | **1.2.0** | Instant effect short-window stacking (off by default, window configurable) |
 | **1.1.2** | Hard cap of **level 128 (amplifier 127)** for all effect stacking; `maxAmplifier` range narrowed to 0~127 |
@@ -199,7 +200,7 @@ The config is read at game startup. Restart the game after editing (you don't ne
 **Q: How high can `maxAmplifier` go?**
 Up to `127` (level 128). This is a **hard cap**: vanilla effects misbehave at extreme amplifier values
 (the classic symptom being that jump boost above a certain level makes the player unable to jump at all),
-so stacking never exceeds level 128. Levels 1–X show as Roman numerals; above X this mod shows Arabic
+so stacking never exceeds level 128. Levels 1–10 show as Roman numerals; above 10 this mod shows Arabic
 numerals, and the numeric level still applies normally.
 
 **Q: Can I change the stack size?**
@@ -246,7 +247,7 @@ New / changed in this port:
 |---|---|
 | Duration stacking, level escalation, negative-effect separation, infinite duration | New in this port |
 | Instant effect short-window stacking | New in this port |
-| Numeric display for levels above X | New in this port |
+| Numeric display for levels above 10 | New in this port |
 | Level 128 hard cap (works around a vanilla bug) | New in this port |
 | Full config file and zh_cn / en_us localisation | New in this port |
 | Potion stacking, glass bottle return, brewing stand shift-click | Ported from the original mod (MIT) |

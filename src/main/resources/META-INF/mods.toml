@@ -9,26 +9,12 @@ modId = "stackablepotionsplus"
 version = "${version}"
 displayName = "Stackable Potions Plus"
 logoFile = "icon.png"
-authors = "CursedFlames (original mod), Lingyao-cangxuan (1.20.1 port & enhancements)"
-credits = "Based on Stackable Potions by CursedFlames (MIT License) - https://modrinth.com/mod/stackablepotions"
+authors = "Lingyao-cangxuan"
+credits = "基于 CursedFlames 的 Stackable Potions（MIT 许可）- https://modrinth.com/mod/stackablepotions"
 description = '''
-Allows vanilla potions to stack to 64.
-Splash/lingering potions can optionally have a 1s use cooldown (default off).
-Re-applying the same potion effect stacks duration and level (configurable caps / infinite).
-Optionally stacks instant effects (heal/damage) within a short window.
-Shows numeric effect levels above X in the inventory effect panel.
+原版药水（普通 / 喷溅 / 滞留）堆叠上限提升至 64 瓶。
+喷溅与滞留药水的 1 秒使用冷却可关闭（默认已关闭）。
+重复获得同一种药水效果时：时长累加、等级逐级提升，上限可配置。
+支持无限时长、负面效果叠加、瞬间效果连发增强（均默认关闭）。
+背包效果面板中，10 级以上的效果改用数字显示。
 '''
-
-[[dependencies.stackablepotionsplus]]
-modId = "forge"
-mandatory = true
-versionRange = "[46,)"
-ordering = "NONE"
-side = "BOTH"
-
-[[dependencies.stackablepotionsplus]]
-modId = "minecraft"
-mandatory = true
-versionRange = "[1.20,1.21)"
-ordering = "NONE"
-side = "BOTH"
