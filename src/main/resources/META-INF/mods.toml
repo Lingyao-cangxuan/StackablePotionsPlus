@@ -1,0 +1,34 @@
+# Mod metadata: id, version, authors, dependencies.
+
+modLoader = "javafml"
+loaderVersion = "[46,)"
+license = "MIT"
+
+[[mods]]
+modId = "stackablepotionsplus"
+version = "${version}"
+displayName = "Stackable Potions Plus"
+logoFile = "icon.png"
+authors = "CursedFlames (original mod), Lingyao-cangxuan (1.20.1 port & enhancements)"
+credits = "Based on Stackable Potions by CursedFlames (MIT License) - https://modrinth.com/mod/stackablepotions"
+description = '''
+Allows vanilla potions to stack to 64.
+Splash/lingering potions can optionally have a 1s use cooldown (default off).
+Re-applying the same potion effect stacks duration and level (configurable caps / infinite).
+Optionally stacks instant effects (heal/damage) within a short window.
+Shows numeric effect levels above X in the inventory effect panel.
+'''
+
+[[dependencies.stackablepotionsplus]]
+modId = "forge"
+mandatory = true
+versionRange = "[46,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.stackablepotionsplus]]
+modId = "minecraft"
+mandatory = true
+versionRange = "[1.20,1.21)"
+ordering = "NONE"
+side = "BOTH"
