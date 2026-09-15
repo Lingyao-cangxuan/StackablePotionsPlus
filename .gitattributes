@@ -1,0 +1,15 @@
+# 统一以 LF 入库；Windows 脚本保留 CRLF。
+* text=auto eol=lf
+gradlew text eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# 二进制资源不做换行转换。
+*.jar  binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ogg  binary
+*.zip  binary
+*.ttf  binary
