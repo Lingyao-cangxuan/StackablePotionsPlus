@@ -1,5 +1,7 @@
 # Stackable Potions Plus
 
+<img src="src/main/resources/icon.png" width="112" alt="Stackable Potions Plus">
+
 [简体中文](README.md) | **English**
 
 Minecraft 1.20.1 · Forge mod · v1.3.1

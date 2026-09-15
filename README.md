@@ -1,5 +1,7 @@
 # Stackable Potions Plus（可堆叠药水 · 强化版）
 
+<img src="src/main/resources/icon.png" width="112" alt="Stackable Potions Plus">
+
 **简体中文** | [English](README_EN.md)
 
 Minecraft 1.20.1 · Forge 模组 · v1.3.1
