@@ -1,0 +1,9 @@
+{
+    "stackablepotionsplus.configuration.maxAmplifier": "Max potion effect amplifier",
+    "stackablepotionsplus.configuration.durationCapSeconds": "Effect duration cap (seconds)",
+    "stackablepotionsplus.configuration.infiniteDuration": "Infinite duration",
+    "stackablepotionsplus.configuration.stackNegativeEffects": "Stack negative effects",
+    "stackablepotionsplus.configuration.enableInstantStacking": "Stack instant effects (heal/damage)",
+    "stackablepotionsplus.configuration.instantStackWindowSeconds": "Instant stack window (seconds)",
+    "stackablepotionsplus.configuration.enableCooldown": "Enable 1s use cooldown"
+}
