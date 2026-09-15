@@ -1,0 +1,9 @@
+{
+    "stackablepotionsplus.configuration.maxAmplifier": "药水效果最高等级 (amplifier)",
+    "stackablepotionsplus.configuration.durationCapSeconds": "药水效果叠加时长上限 (秒)",
+    "stackablepotionsplus.configuration.infiniteDuration": "无限时长 (药水效果永不衰减)",
+    "stackablepotionsplus.configuration.stackNegativeEffects": "负面效果叠加",
+    "stackablepotionsplus.configuration.enableInstantStacking": "瞬间效果叠加 (治疗/伤害连发增强)",
+    "stackablepotionsplus.configuration.instantStackWindowSeconds": "瞬间效果叠加窗口 (秒)",
+    "stackablepotionsplus.configuration.enableCooldown": "启用 1 秒使用冷却"
+}
