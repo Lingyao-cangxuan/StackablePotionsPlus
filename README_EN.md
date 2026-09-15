@@ -1,0 +1,256 @@
+# Stackable Potions Plus
+
+[简体中文](README.md) | **English**
+
+Minecraft 1.20.1 · Forge mod · v1.3.0
+
+> Mod ID: `stackablepotionsplus` | Based on [Stackable Potions](https://modrinth.com/mod/stackablepotions) by CursedFlames (MIT)
+
+Makes vanilla potions truly **stackable and buffable**: potions stack into a single pile, drinking
+consumes only one bottle and returns the glass bottle, splash/lingering potions lose their use cooldown,
+and re-applying the same potion effect **extends its duration and raises its level**. Every value is
+configurable.
+
+---
+
+## Overview
+
+**Stackable Potions Plus** turns potions from one-shot consumables into a resource you can stockpile
+and grow stronger.
+
+In vanilla Minecraft a potion stack holds a single bottle, splash potions carry a 1-second use cooldown,
+and drinking the same potion again only refreshes its duration instead of making it stronger. This mod
+reworks all three, and adds the supporting behaviour potion stacking needs:
+
+| | Vanilla | This mod |
+|---|---|---|
+| Potion stack size | 1 bottle | **64 bottles** (regular · splash · lingering) |
+| Splash / lingering potions | 1s use cooldown | **No cooldown**, throw freely |
+| Re-applying the same effect | Duration refreshed only | **Duration adds up + level increases** |
+| Drinking from a stack | — | **Consumes 1 bottle, returns a glass bottle** |
+| Brewing stand | — | Shift-click moves potion stacks |
+
+On top of that, the mod is fully configurable: level cap, duration cap, infinite duration, whether
+negative effects take part in stacking, and short-window stacking for instant effects.
+
+Built for players and modpacks that want simpler potion logistics, or a "the longer the fight,
+the stronger you get" playstyle.
+
+---
+
+## Features
+
+| Feature | Default | Configurable |
+|---|---|---|
+| Potions stack | Up to 64 per stack (vanilla: 1) | Fixed (64) |
+| Splash/lingering potions have no use cooldown | No cooldown (vanilla: 1s) | ✅ `enableCooldown` |
+| Drinking returns a glass bottle, consumes one bottle | On | Fixed |
+| Brewing stand shift-click support | On | Fixed |
+| Re-applying an effect adds duration | On | ✅ `durationCapSeconds` |
+| Re-applying an effect raises its level | On, capped at level V | ✅ `maxAmplifier` |
+| Infinite duration (effects never expire) | Off | ✅ `infiniteDuration` |
+| Negative effects also stack | Off (vanilla behaviour kept) | ✅ `stackNegativeEffects` |
+| Instant effect short-window stacking (heal/damage) | Off | ✅ `enableInstantStacking` + `instantStackWindowSeconds` |
+| Numeric display for high effect levels | Levels above X shown as Arabic numerals | Fixed |
+
+---
+
+## Requirements
+
+- Minecraft **1.20.1**
+- Minecraft Forge **47.x** (declared as `[46,)`; use 47.1.0+ on 1.20.1)
+- No other dependencies
+
+Drop `StackablePotionsPlus-1.20.1-1.3.0.jar` into your `mods` folder.
+
+> ⚠️ **Not compatible with the original mod.** This mod uses its own ID `stackablepotionsplus`.
+> Do **not** install it alongside the original Stackable Potions — both modify `Items` registration
+> and potion effect merging, and they will conflict.
+
+---
+
+## Configuration
+
+A config file is generated on first launch:
+
+```
+config/stackablepotionsplus-common.toml
+```
+
+Comments in the generated file are written in Chinese. Changes require **restarting the game**.
+
+### Options
+
+#### 1. Effect stacking (`effect_stacking`)
+
+| Key | Default | Range | Description |
+|---|---|---|---|
+| `maxAmplifier` | `4` | `0 ~ 127` | Highest level effects can stack to. Level I = 0, II = 1, so **level V = 4**. **Hard cap of 127 (= level 128)**: vanilla misbehaves at extreme amplifier values (jump boost above level 128 makes jumping fail entirely), so stacking never exceeds this |
+| `durationCapSeconds` | `0` | `0 ~ 107374182` | Cap on the stacked total duration, in seconds. `0` = uncapped (bounded only by the game's integer limit) |
+| `infiniteDuration` | `false` | `true / false` | When on, stacked effects **never expire**. Ignores `durationCapSeconds` |
+| `stackNegativeEffects` | `false` | `true / false` | Whether negative effects (poison, slowness, weakness, wither…) also stack level and duration. Off by default: negatives keep vanilla behaviour (take the stronger/longer one, no level escalation) |
+| `enableInstantStacking` | `false` | `true / false` | Whether **instant effects** (instant health / instant damage) get stronger when applied repeatedly in a short window. Off by default |
+| `instantStackWindowSeconds` | `1.0` | `0.1 ~ 60.0` | Time window (seconds) for instant effect stacking. Applied repeatedly to the same target within the window, each application adds +1 to the level; outside the window the counter resets |
+
+#### 2. Use cooldown (`cooldown`)
+
+| Key | Default | Range | Description |
+|---|---|---|---|
+| `enableCooldown` | `false` | `true / false` | Re-enables the vanilla 1-second (20 tick) cooldown on splash/lingering potions. Off by default (this mod removes it) |
+
+### Default config
+
+```toml
+[effect_stacking]
+	maxAmplifier = 4
+	durationCapSeconds = 0
+	infiniteDuration = false
+	stackNegativeEffects = false
+	enableInstantStacking = false
+	instantStackWindowSeconds = 1.0
+
+[cooldown]
+	enableCooldown = false
+```
+
+---
+
+## How it works
+
+### 1. Effect stacking
+
+When a player or mob **already has** a potion effect and gains the same effect again:
+
+- **Duration** is **added** to the remaining duration (vanilla keeps whichever is longer).
+  - Example: Strength with 2:00 left, drink another (3:00) → 5:00.
+  - Bounded by `durationCapSeconds`; `0` means uncapped.
+- **Level** increases by 1 on top of the **higher** of the existing and incoming level.
+  - Example: Strength I + Strength I → Strength II; Strength II + Strength I → Strength III.
+  - Bounded by `maxAmplifier`, default `4` (level V). At the cap, further potions only extend duration.
+- **Infinite**: with `infiniteDuration = true`, the stacked duration is set to infinite
+  (`duration = -1`, equivalent to `/effect give ... infinite`). The HUD shows an infinity symbol
+  and the effect never ticks down.
+
+### 2. Negative effects stay vanilla by default
+
+With `stackNegativeEffects = false`, poison, slowness, weakness and friends keep vanilla behaviour:
+re-applying takes the stronger or longer version without escalating levels.
+
+Set it to `true` to make negatives stack too — combined with 64-stacking and no cooldown, you can
+pelt a mob group with poison and push it all the way to level V.
+
+### 3. Glass bottle return
+
+Drinking from a potion stack consumes one bottle and returns one glass bottle; the stack is never
+swallowed whole.
+
+### 4. Brewing stand
+
+Potion stacks can be shift-clicked in and out of the brewing stand, and go into / out of the
+brewing slots normally.
+
+### 5. Instant effect stacking (off by default)
+
+Instant health / instant damage don't go through the "persistent effect stacking" path (they resolve
+in a single tick and disappear), so duration/level stacking doesn't apply to them. With
+`enableInstantStacking = true`:
+
+- Within `instantStackWindowSeconds` (default 1 second), applying the same instant effect to
+  **the same target** repeatedly adds +1 to the level each time (II → III → IV …);
+- Outside the window, or targeting a different entity/effect, the counter restarts from the
+  potion's own level;
+- Results are still bounded by `maxAmplifier` and the hard cap of level 128.
+
+Typical use: throw several instant damage potions at one mob, or chug instant health to heal up,
+getting stronger each time. Drinking, splash and lingering paths all work.
+
+### 6. High level display
+
+The vanilla inventory effect panel only renders levels 1–X as Roman numerals; **levels above X lose
+their label entirely**. This mod fixes that: levels up to X keep the Roman numeral look, and
+**anything above X is shown as an Arabic numeral** (11, 25, …), so raising `maxAmplifier` stays
+readable.
+
+---
+
+## Version history
+
+| Version | Notes |
+|---|---|
+| **1.3.0** | **Independent mod ID**: `stackablepotions` → `stackablepotionsplus`, package renamed to `lingyaocangxuan.stackablepotionsplus`, display name is now "Stackable Potions Plus". No longer clashes with the original mod's ID. MIT compliance completed: added `LICENSE.txt` (bundled into the jar under `META-INF/`), and `authors` / `credits` now credit both the original author and the porter. **Note: the config file is now `config/stackablepotionsplus-common.toml`; the old file is no longer read** |
+| **1.2.0** | Instant effect short-window stacking (off by default, window configurable) |
+| **1.1.2** | Hard cap of **level 128 (amplifier 127)** for all effect stacking; `maxAmplifier` range narrowed to 0~127 |
+| **1.1.1** | Removed the stack-size config option (it could never work: item registration runs before the config loads, so stack size is now fixed at 64); added numeric level display |
+| **1.1.0** | Full config support, Chinese comments; `maxAmplifier`, `durationCapSeconds`, `enableCooldown`, `infiniteDuration`, `stackNegativeEffects`; added zh_cn / en_us lang files |
+| **1.0.2** | Effect stacking: duration adds up, level increases up to V |
+| **1.0.1** | Potion stack size 16 → 64; removed the 1s cooldown on splash/lingering potions |
+| **1.0.0** | Original mod by CursedFlames: potions stack to 16 |
+
+> 1.0.0 is the original 1.20.1 Forge release by CursedFlames. 1.0.1 and later are developed in this
+> fork, released under the MIT license — see [LICENSE.txt](LICENSE.txt).
+
+---
+
+## FAQ
+
+**Q: I changed the config but nothing happened in game.**
+The config is read at game startup. Restart the game after editing (you don't need to re-enter the world).
+
+**Q: How high can `maxAmplifier` go?**
+Up to `127` (level 128). This is a **hard cap**: vanilla effects misbehave at extreme amplifier values
+(the classic symptom being that jump boost above a certain level makes the player unable to jump at all),
+so stacking never exceeds level 128. Levels 1–X show as Roman numerals; above X this mod shows Arabic
+numerals, and the numeric level still applies normally.
+
+**Q: Can I change the stack size?**
+No. Potions are fixed at 64 per stack (the vanilla default for ordinary items). A config option used to
+exist, but it could never take effect because item registration happens before the config file is loaded,
+so it was removed.
+
+**Q: What might this conflict with?**
+This mod mixins into vanilla item registration and potion effect merging. Other mods that modify
+`Items` static registration, `MobEffectInstance.update`, or potion-related GUIs may conflict. Such
+conflicts usually show up as a mixin apply failure at startup (`Mixin apply failed` in the log) —
+provide the log if you hit one.
+
+**Q: Do I need it on both client and server?**
+The mod changes item properties at registration time and effect merging, which must stay in sync.
+**For multiplayer, install it on both the server and the client**, otherwise stack sizes / data may
+desync. Singleplayer only needs it locally.
+
+**Q: Why is `durationCapSeconds` 0 instead of a huge number?**
+`0` means "no cap"; the stacked duration is then bounded only by the game's int limit (~2.1 billion
+ticks, unreachable in practice). Enter a specific number of seconds if you want "stacking stops at
+N seconds".
+
+---
+
+## License & Credits
+
+This is a Minecraft 1.20.1 / Forge port and enhancement of **Stackable Potions** by **CursedFlames**.
+
+- Original mod: <https://modrinth.com/mod/stackablepotions>
+- Original license: **MIT License**, `Copyright 2020 CursedFlames`
+
+Under the terms of the MIT license, this port is likewise released under the **MIT License**. The full
+license text is in [`LICENSE.txt`](LICENSE.txt) and is bundled into the jar as `META-INF/LICENSE.txt`.
+
+```
+Copyright 2020 CursedFlames
+Copyright 2026 Lingyao-cangxuan
+```
+
+New / changed in this port:
+
+| Content | Attribution |
+|---|---|
+| Duration stacking, level escalation, negative-effect separation, infinite duration | New in this port |
+| Instant effect short-window stacking | New in this port |
+| Numeric display for levels above X | New in this port |
+| Level 128 hard cap (works around a vanilla bug) | New in this port |
+| Full config file and zh_cn / en_us localisation | New in this port |
+| Potion stacking, glass bottle return, brewing stand shift-click | Ported from the original mod (MIT) |
+
+The icon `icon.png` is reused from the original mod (MIT, copyright CursedFlames).
+The original repository has been archived and moved to <https://github.com/CursedFlames/MCTweaks>,
+but its MIT grant is irrevocable and remains valid.
