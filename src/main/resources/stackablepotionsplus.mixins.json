@@ -1,0 +1,24 @@
+{
+	"required": true,
+	"minVersion": "0.8",
+	"package": "lingyaocangxuan.stackablepotionsplus.mixin",
+	"compatibilityLevel": "JAVA_17",
+	"mixins": [
+		"MixinAreaEffectCloud",
+		"MixinBrewingStandMenu",
+		"MixinItems",
+		"MixinMobEffectInstance",
+		"MixinPotionItem",
+		"MixinSplashPotionItem",
+		"MixinThrownPotion"
+	],
+	"client": [
+		"MixinEffectLevelDisplay"
+	],
+	"server": [
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"refmap": "stackablepotionsplus.refmap.json"
+}
