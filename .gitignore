@@ -1,0 +1,31 @@
+# 构建产物与开发环境文件不入库。
+
+# Gradle
+.gradle/
+build/
+out/
+
+# Forge 运行目录（世界、日志、本地配置）
+run/
+logs/
+*.log
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.eclipse/
+.settings/
+.classpath
+.project
+.vscode/
+
+# 系统
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# jar 通过 Release 分发
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
