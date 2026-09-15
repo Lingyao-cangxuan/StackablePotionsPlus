@@ -1,0 +1,11 @@
+// Gradle 项目名与插件仓库。
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+        maven { url = 'https://maven.minecraftforge.net/' }
+        maven { url = 'https://repo.spongepowered.org/maven/' }
+    }
+}
+
+rootProject.name = 'StackablePotionsPlus'
