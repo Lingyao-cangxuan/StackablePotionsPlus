@@ -1,0 +1,117 @@
+// 构建脚本：Forge 1.20.1 工程与打包配置。
+plugins {
+    id 'eclipse'
+    id 'idea'
+    id 'maven-publish'
+    id 'net.minecraftforge.gradle' version '[6.0,6.2)'
+    id 'org.spongepowered.mixin' version '0.7.+'
+}
+
+version = '1.20.1-1.3.0'
+group = 'lingyaocangxuan.stackablepotionsplus'
+
+base {
+    archivesName = 'StackablePotionsPlus'
+}
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(17)
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+minecraft {
+    mappings channel: 'official', version: '1.20.1'
+
+    accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
+
+    runs {
+        client {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+            arg "-mixin.config=stackablepotionsplus.mixins.json"
+            mods {
+                stackablepotionsplus {
+                    source sourceSets.main
+                }
+            }
+        }
+
+        server {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+            arg "-mixin.config=stackablepotionsplus.mixins.json"
+            mods {
+                stackablepotionsplus {
+                    source sourceSets.main
+                }
+            }
+        }
+
+        data {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+            args '--mod', 'stackablepotionsplus', '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
+            mods {
+                stackablepotionsplus {
+                    source sourceSets.main
+                }
+            }
+        }
+    }
+}
+
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+
+mixin {
+    add sourceSets.main, 'stackablepotionsplus.refmap.json'
+    config 'stackablepotionsplus.mixins.json'
+    debug.verbose = true
+    debug.export = true
+}
+
+repositories {
+    mavenCentral()
+    maven { url 'https://maven.minecraftforge.net/' }
+    maven { url 'https://repo.spongepowered.org/maven/' }
+}
+
+dependencies {
+    minecraft 'net.minecraftforge:forge:1.20.1-47.3.0'
+
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+}
+
+jar {
+    // 随包附带 MIT 许可全文与版权声明（许可义务）。
+    from('LICENSE.txt') {
+        into 'META-INF'
+    }
+    manifest {
+        attributes([
+                "Specification-Title"     : "stackablepotionsplus",
+                "Specification-Vendor"    : "CursedFlames",
+                "Specification-Version"   : "1",
+                "Implementation-Title"    : project.name,
+                "Implementation-Version"  : project.jar.archiveVersion,
+                "Implementation-Vendor"   : "Lingyao-cangxuan",
+                "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
+                "MixinConfigs"            : "stackablepotionsplus.mixins.json"
+        ])
+    }
+}
+
+jar.finalizedBy('reobfJar')
+
+processResources {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    inputs.property 'version', project.version
+    filesMatching('META-INF/mods.toml') {
+        expand 'version': project.version
+    }
+}
