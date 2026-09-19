@@ -4,7 +4,7 @@
 
 [简体中文](README.md) | **English**
 
-Minecraft 1.20.1 · Forge mod · v1.3.1
+Minecraft 1.20.1 · Forge mod · v1.4.1
 
 > Mod ID: `stackablepotionsplus` | Based on [Stackable Potions](https://modrinth.com/mod/stackablepotions) by CursedFlames (MIT)
 
@@ -48,6 +48,8 @@ the stronger you get" playstyle.
 | Splash/lingering potions have no use cooldown | No cooldown (vanilla: 1s) | ✅ `enableCooldown` |
 | Drinking returns a glass bottle, consumes one bottle | On | Fixed |
 | Brewing stand shift-click support | On | Fixed |
+| **Brewing stand slot capacity** | 64 bottles per slot (vanilla hardcodes 1) | ✅ `potionSlotCapacity` |
+| **Brewing stand batch brewing** | Brews the whole batch once ingredients ≥ the fullest slot | Fixed |
 | Re-applying an effect adds duration | On | ✅ `durationCapSeconds` |
 | Re-applying an effect raises its level | On, capped at level V | ✅ `maxAmplifier` |
 | Infinite duration (effects never expire) | Off | ✅ `infiniteDuration` |
@@ -63,7 +65,7 @@ the stronger you get" playstyle.
 - Minecraft Forge **47.x** (declared as `[46,)`; use 47.1.0+ on 1.20.1)
 - No other dependencies
 
-Drop `StackablePotionsPlus-1.20.1-1.3.1.jar` into your `mods` folder.
+Drop `StackablePotionsPlus-1.20.1-1.4.1.jar` into your `mods` folder.
 
 > ⚠️ **Not compatible with the original mod.** This mod uses its own ID `stackablepotionsplus`.
 > Do **not** install it alongside the original Stackable Potions — both modify `Items` registration
@@ -148,8 +150,23 @@ swallowed whole.
 
 ### 4. Brewing stand
 
-Potion stacks can be shift-clicked in and out of the brewing stand, and go into / out of the
-brewing slots normally.
+**Shift-click**: potion stacks can be shift-clicked straight into all three empty potion slots at once.
+
+**Batch brewing**: each potion slot holds up to 64 bottles, and the whole batch brews in one go once
+the ingredient count matches the **largest** of the three slots:
+
+- How much ingredient you need is decided by the fullest potion slot. Put in 35 / 6 / 12 bottles and
+  you need 35 ingredients before brewing starts.
+- With too few ingredients the stand **won't light up**, so no blaze powder is wasted. It starts
+  automatically once you top up.
+- Brew time scales with the batch (vanilla 400 ticks × batch size), so large batches aren't instant.
+- Ingredients are consumed in one go (35 bottles → 35 ingredients).
+- With a single bottle the mod behaves exactly like vanilla.
+
+> **Note: vanilla hardcodes the potion slot capacity to 1.** Even after raising the potion stack size
+> to 64, the brewing stand slot still accepted only one bottle. This mod overrides
+> `BrewingStandMenu$PotionSlot#getMaxStackSize()` via Mixin to lift that limit; the capacity is
+> controlled by the `brewing.potionSlotCapacity` config option (default 64; set to 1 for vanilla).
 
 ### 5. Instant effect stacking (off by default)
 
@@ -179,6 +196,8 @@ readable.
 
 | Version | Notes |
 |---|---|
+| **1.4.1** | **Fixed "stacked potions can't be placed into the brewing stand"**: vanilla `BrewingStandMenu$PotionSlot#getMaxStackSize()` is hardcoded to return 1 — a separate limit from the item's stack size, so the slot still accepted only one bottle even with 64-stack potions. The slot capacity is now opened up via Mixin, with a new config option `brewing.potionSlotCapacity` (default 64; set to 1 for vanilla behaviour). Also rewrote the shift-click transfer check — the previous implementation only called `split` on the source stack without clearing it, leaving leftover items |
+| **1.4.0** | Added **brewing stand batch brewing**: each of the three potion slots holds up to 64 bottles, and the whole batch brews in one go once the ingredient count matches the fullest slot. The stand won't light up with too few ingredients; brew time and ingredient cost scale with the batch. Mixin priority is set to the maximum (`2147483647`) so this mod wins when another mod also touches the brewing stand or potion stacking |
 | **1.3.1** | New mod icon (no longer reusing the original mod's art); the description, author and credits shown in the mod list are now Chinese and more concise |
 | **1.3.0** | **Independent mod ID**: `stackablepotions` → `stackablepotionsplus`, package renamed to `lingyaocangxuan.stackablepotionsplus`, display name is now "Stackable Potions Plus". No longer clashes with the original mod's ID. MIT compliance completed: added `LICENSE.txt` (bundled into the jar under `META-INF/`), and `authors` / `credits` now credit both the original author and the porter. **Note: the config file is now `config/stackablepotionsplus-common.toml`; the old file is no longer read** |
 | **1.2.0** | Instant effect short-window stacking (off by default, window configurable) |

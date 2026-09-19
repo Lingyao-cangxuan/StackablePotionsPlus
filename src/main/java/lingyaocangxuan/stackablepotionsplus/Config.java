@@ -13,9 +13,21 @@ public class Config {
     public static final ForgeConfigSpec.BooleanValue stackNegativeEffects;
     public static final ForgeConfigSpec.BooleanValue enableInstantStacking;
     public static final ForgeConfigSpec.DoubleValue instantStackWindowSeconds;
+    public static final ForgeConfigSpec.IntValue potionSlotCapacity;
 
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
+
+        builder.comment("酿造台批量炼药设置", "Brewing stand batch settings")
+                .push("brewing");
+        potionSlotCapacity = builder
+                .comment("酿造台每个药水槽的容量上限（单位：瓶）。原版硬编码为 1，这是「堆叠药水放不进去」的直接原因。",
+                        "药水物品自身的堆叠上限（64）由本模组另行设置，此项独立控制槽位容量。",
+                        "设为 1 恢复原版行为。",
+                        "Vanilla hardcodes the potion slot capacity to 1, which blocks stacked potions.")
+                .translation("stackablepotionsplus.configuration.potionSlotCapacity")
+                .defineInRange("potionSlotCapacity", 64, 1, 64);
+        builder.pop();
 
         builder.comment("药水效果叠加设置", "Settings for stacking potion effects")
                 .push("effect_stacking");

@@ -4,7 +4,7 @@
 
 **简体中文** | [English](README_EN.md)
 
-Minecraft 1.20.1 · Forge 模组 · v1.3.1
+Minecraft 1.20.1 · Forge 模组 · v1.4.1
 
 > 模组 ID：`stackablepotionsplus` ｜ 基于 CursedFlames 的 [Stackable Potions](https://modrinth.com/mod/stackablepotions)（MIT）移植增强
 
@@ -43,6 +43,8 @@ Minecraft 1.20.1 · Forge 模组 · v1.3.1
 | 喷溅/滞留药水无使用冷却 | 无冷却（原版 1 秒） | ✅ `enableCooldown` |
 | 喝药水返还玻璃瓶、不消耗整组 | 开启 | 固定 |
 | 酿造台可快捷移动堆叠药水 | 开启 | 固定 |
+| **酿造台药水槽容量** | 每槽 64 瓶（原版硬编码为 1） | ✅ `potionSlotCapacity` |
+| **酿造台批量炼药** | 材料数 ≥ 最多那槽的瓶数时一次性整批炼完 | 固定 |
 | 重复获得同种效果 → 时长累加 | 开启 | ✅ `durationCapSeconds` |
 | 重复获得同种效果 → 等级逐级叠加 | 开启，最高 V 级 | ✅ `maxAmplifier` |
 | 无限时长（效果永不衰减） | 关闭 | ✅ `infiniteDuration` |
@@ -58,7 +60,7 @@ Minecraft 1.20.1 · Forge 模组 · v1.3.1
 - Minecraft Forge **47.x**（依赖声明为 `[46,)`，1.20.1 请用 47.1.0+）
 - 不需要其它前置模组
 
-把 `StackablePotionsPlus-1.20.1-1.3.1.jar` 放入 `mods` 文件夹即可。
+把 `StackablePotionsPlus-1.20.1-1.4.1.jar` 放入 `mods` 文件夹即可。
 
 > ⚠️ **与原模组不兼容**：本模组使用独立 ID `stackablepotionsplus`，**不要**与原版
 > Stackable Potions 同时安装，两者都改 `Items` 注册与药水效果合并逻辑，同时装会冲突。
@@ -147,7 +149,19 @@ config/stackablepotionsplus-common.toml
 
 ### 4. 酿造台适配
 
-酿造台支持快捷移动（Shift 点击）堆叠药水，堆叠的药水可以顺畅地放入 / 取出酿造槽位。
+**快捷移动**：Shift 点击可把整组堆叠药水一次性分装进三个药水槽。
+
+**批量炼药**：三个药水槽各可放最多 64 瓶，材料槽放满对应数量即可**一次炼完整批**：
+
+- 需要多少材料，看三个槽里**最多的那一槽**。例如放入 35 / 6 / 12 瓶，就需要 35 个材料才会开始炼制。
+- 材料不足时**不点火**，避免白白消耗烈焰粉；补足后自动开始。
+- 炼制耗时按批数放大（原版 400 tick × 批数），大批量不会瞬间完成。
+- 材料按批数一次性扣除（35 瓶就扣 35 个材料）。
+- 不满载时（只有一瓶）完全保持原版行为。
+
+> **⚠️ 原版药水槽容量是硬编码的 1** —— 即使物品堆叠上限已改为 64，酿造台药水槽仍只放得进 1 瓶。
+> 本模组通过 Mixin 覆盖 `BrewingStandMenu$PotionSlot#getMaxStackSize()` 放开此限制，
+> 容量由配置项 `brewing.potionSlotCapacity` 控制（默认 64，设为 1 恢复原版行为）。
 
 ### 5. 瞬间效果短窗口叠加（默认关闭）
 
@@ -174,6 +188,8 @@ config/stackablepotionsplus-common.toml
 
 | 版本 | 说明 |
 |---|---|
+| **1.4.1** | **修复「堆叠药水放不进酿造台」**：原版 `BrewingStandMenu$PotionSlot#getMaxStackSize()` 硬编码返回 1，与物品堆叠上限是两套独立限制——即使药水已是 64 堆叠，槽位仍只收 1 瓶。现由 Mixin 放开槽位容量，新增配置项 `brewing.potionSlotCapacity`（默认 64，设 1 恢复原版）。同时重写 Shift 快捷移动判定：旧实现对源堆只做 `split` 未清空，会残留物品 |
+| **1.4.0** | 新增**酿造台批量炼药**：三个药水槽各可放 64 瓶，材料数达到三槽中最多那槽的瓶数时一次性整批炼完；材料不足不点火，耗时与材料按批数换算。Mixin 全局优先级设为最高（`2147483647`），与其他修改酿造台/药水堆叠的模组冲突时以本模组为准 |
 | **1.3.1** | 更换模组图标（不再沿用原模组素材）；模组列表中的描述、作者、致谢改为中文并精简 |
 | **1.3.0** | **更换独立模组 ID**：`stackablepotions` → `stackablepotionsplus`，包名改为 `lingyaocangxuan.stackablepotionsplus`，显示名改为 "Stackable Potions Plus"。至此不再与原模组 ID 冲突，可独立上传。同时补齐 MIT 许可合规：新增 `LICENSE.txt`（已打包进 JAR 的 `META-INF/`）、`authors` / `credits` 明确标注原作者与移植者。**注意：配置文件随之更名为 `config/stackablepotionsplus-common.toml`，旧配置文件不再读取** |
 | **1.2.0** | 新增瞬间效果短窗口叠加（默认关闭，可配窗口秒数）：治疗/伤害在窗口内对同一目标连发时逐级增强，覆盖饮用/喷溅/滞留三条途径 |
