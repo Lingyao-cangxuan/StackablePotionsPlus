@@ -4,7 +4,7 @@
 
 **简体中文** | [English](README_EN.md)
 
-Minecraft 1.20.1 · Forge 模组 · v1.4.1
+Minecraft 1.20.1 · Forge 模组 · v1.4.2
 
 > 模组 ID：`stackablepotionsplus` ｜ 基于 CursedFlames 的 [Stackable Potions](https://modrinth.com/mod/stackablepotions)（MIT）移植增强
 
@@ -60,7 +60,7 @@ Minecraft 1.20.1 · Forge 模组 · v1.4.1
 - Minecraft Forge **47.x**（依赖声明为 `[46,)`，1.20.1 请用 47.1.0+）
 - 不需要其它前置模组
 
-把 `StackablePotionsPlus-1.20.1-1.4.1.jar` 放入 `mods` 文件夹即可。
+把 `StackablePotionsPlus-1.20.1-1.4.2.jar` 放入 `mods` 文件夹即可。
 
 > ⚠️ **与原模组不兼容**：本模组使用独立 ID `stackablepotionsplus`，**不要**与原版
 > Stackable Potions 同时安装，两者都改 `Items` 注册与药水效果合并逻辑，同时装会冲突。
@@ -155,13 +155,21 @@ config/stackablepotionsplus-common.toml
 
 - 需要多少材料，看三个槽里**最多的那一槽**。例如放入 35 / 6 / 12 瓶，就需要 35 个材料才会开始炼制。
 - 材料不足时**不点火**，避免白白消耗烈焰粉；补足后自动开始。
-- 炼制耗时按批数放大（原版 400 tick × 批数），大批量不会瞬间完成。
+- 一次炼制耗时为原版 400 tick（20 秒），**不随瓶数增加**，进度条显示正常。
 - 材料按批数一次性扣除（35 瓶就扣 35 个材料）。
 - 不满载时（只有一瓶）完全保持原版行为。
 
-> **⚠️ 原版药水槽容量是硬编码的 1** —— 即使物品堆叠上限已改为 64，酿造台药水槽仍只放得进 1 瓶。
-> 本模组通过 Mixin 覆盖 `BrewingStandMenu$PotionSlot#getMaxStackSize()` 放开此限制，
-> 容量由配置项 `brewing.potionSlotCapacity` 控制（默认 64，设为 1 恢复原版行为）。
+> **⚠️ 两个原版硬限制，都会让堆叠药水在酿造台上"看起来没反应"**
+>
+> 1. **药水槽容量硬编码为 1** —— 即使物品堆叠上限已改为 64，槽位仍只收 1 瓶。
+>    由 Mixin 覆盖 `BrewingStandMenu$PotionSlot#getMaxStackSize()` 放开，
+>    配置项 `brewing.potionSlotCapacity`（默认 64，设为 1 恢复原版）。
+> 2. **Forge 酿造配方系统要求「输入槽只有 1 瓶」** —— `BrewingRecipeRegistry.getOutput`
+>    开头即 `if (input.getCount() != 1) return EMPTY`，导致 `isBrewable` 对堆叠药水恒为 false，
+>    酿造台永远不会开始。本模组在批量时接管 `isBrewable` / `doBrew`，
+>    内部用单瓶副本查配方，再把整批瓶数写回产物。
+>
+> 这两条不解决，GUI 上就是"放满材料也不炼"。
 
 ### 5. 瞬间效果短窗口叠加（默认关闭）
 
@@ -188,6 +196,7 @@ config/stackablepotionsplus-common.toml
 
 | 版本 | 说明 |
 |---|---|
+| **1.4.2** | **修复「放入足量材料后不酿造」**：Forge 的 `BrewingRecipeRegistry.getOutput` 开头即 `if (input.getCount() != 1) return EMPTY`，而 `canBrew`/`hasOutput` 都经由它 —— 于是堆叠药水在 Forge 眼里是"不可酿"的，`isBrewable` 恒为 false，`serverTick` 永远不会把 `brewTime` 置为 400，酿造台完全不启动。现批量时接管 `isBrewable` / `doBrew`，内部用单瓶副本查配方、再把整批瓶数写回产物。同时**取消耗时按批数放大**：原设计把 `brewTime` 放大 64 倍（25600 tick ≈ 21 分钟），而 GUI 进度条分母硬编码为 400，会被算成负数从而完全不可见，看起来就像没在炼 |
 | **1.4.1** | **修复「堆叠药水放不进酿造台」**：原版 `BrewingStandMenu$PotionSlot#getMaxStackSize()` 硬编码返回 1，与物品堆叠上限是两套独立限制——即使药水已是 64 堆叠，槽位仍只收 1 瓶。现由 Mixin 放开槽位容量，新增配置项 `brewing.potionSlotCapacity`（默认 64，设 1 恢复原版）。同时重写 Shift 快捷移动判定：旧实现对源堆只做 `split` 未清空，会残留物品 |
 | **1.4.0** | 新增**酿造台批量炼药**：三个药水槽各可放 64 瓶，材料数达到三槽中最多那槽的瓶数时一次性整批炼完；材料不足不点火，耗时与材料按批数换算。Mixin 全局优先级设为最高（`2147483647`），与其他修改酿造台/药水堆叠的模组冲突时以本模组为准 |
 | **1.3.1** | 更换模组图标（不再沿用原模组素材）；模组列表中的描述、作者、致谢改为中文并精简 |
