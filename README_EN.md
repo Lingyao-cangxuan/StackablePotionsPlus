@@ -4,7 +4,7 @@
 
 [简体中文](README.md) | **English**
 
-Minecraft 1.20.1 · Forge mod · v1.4.2
+Minecraft 1.20.1 · Forge mod · v1.4.3
 
 > Mod ID: `stackablepotionsplus` | Based on [Stackable Potions](https://modrinth.com/mod/stackablepotions) by CursedFlames (MIT)
 
@@ -65,7 +65,7 @@ the stronger you get" playstyle.
 - Minecraft Forge **47.x** (declared as `[46,)`; use 47.1.0+ on 1.20.1)
 - No other dependencies
 
-Drop `StackablePotionsPlus-1.20.1-1.4.2.jar` into your `mods` folder.
+Drop `StackablePotionsPlus-1.20.1-1.4.3.jar` into your `mods` folder.
 
 > ⚠️ **Not compatible with the original mod.** This mod uses its own ID `stackablepotionsplus`.
 > Do **not** install it alongside the original Stackable Potions — both modify `Items` registration
@@ -205,6 +205,7 @@ readable.
 
 | Version | Notes |
 |---|---|
+| **1.4.3** | **Fixed lost byproducts during batch brewing**: the 1.4.2 `doBrew` takeover missed vanilla's crafting-remainder handling — dragon's breath (registered with `craftRemainder(GLASS_BOTTLE)`) should return a glass bottle per brewed lingering potion, so a batch should return the whole batch. Now restored with vanilla semantics: when the ingredient runs out the byproduct takes over the ingredient slot, otherwise it is dropped into the world |
 | **1.4.2** | **Fixed "full ingredients but no brewing"**: Forge's `BrewingRecipeRegistry.getOutput` starts with `if (input.getCount() != 1) return EMPTY`, and both `canBrew` and `hasOutput` go through it — so stacked potions are "unbrewable" as far as Forge is concerned: `isBrewable` is permanently false and `serverTick` never sets `brewTime` to 400, leaving the stand idle. This mod now takes over `isBrewable` / `doBrew` for batches: recipes are queried with a single-bottle copy and the full batch count is written back to the output. Also **removed the brew-time scaling** — the old design multiplied `brewTime` by the batch size (25600 ticks ≈ 21 min for 64 bottles), while the GUI progress bar divides by a hardcoded 400, producing a negative width that renders nothing at all |
 | **1.4.1** | **Fixed "stacked potions can't be placed into the brewing stand"**: vanilla `BrewingStandMenu$PotionSlot#getMaxStackSize()` is hardcoded to return 1 — a separate limit from the item's stack size, so the slot still accepted only one bottle even with 64-stack potions. The slot capacity is now opened up via Mixin, with a new config option `brewing.potionSlotCapacity` (default 64; set to 1 for vanilla behaviour). Also rewrote the shift-click transfer check — the previous implementation only called `split` on the source stack without clearing it, leaving leftover items |
 | **1.4.0** | Added **brewing stand batch brewing**: each of the three potion slots holds up to 64 bottles, and the whole batch brews in one go once the ingredient count matches the fullest slot. The stand won't light up with too few ingredients. Mixin priority is set to the maximum (`2147483647`) so this mod wins when another mod also touches the brewing stand or potion stacking |

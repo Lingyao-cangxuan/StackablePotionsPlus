@@ -14,6 +14,7 @@ package lingyaocangxuan.stackablepotionsplus.mixin;
 import lingyaocangxuan.stackablepotionsplus.BrewingBatchHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
+import net.minecraft.world.Containers;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BrewingStandBlockEntity;
@@ -91,6 +92,10 @@ public abstract class MixinBrewingStandBlockEntity {
             return;
         }
         ItemStack ingredient = items.get(BrewingBatchHelper.INGREDIENT_SLOT);
+        // 原版 doBrew 走 BrewingRecipeRegistry.brewPotions(items, ingredient, SLOTS_FOR_SIDES)，
+        // 而 SLOTS_FOR_SIDES = {0, 1, 2, 4}（末位是燃料槽）。这里只处理 0-2 是等价的：
+        // 槽 4 只允许放烈焰粉（FuelSlot.mayPlaceItem），烈焰粉不是酿造原料，
+        // getOutput 对它恒返回空，遍历它也产生不了任何输出。
         for (int i = 0; i < BrewingBatchHelper.POTION_SLOTS; i++) {
             ItemStack potion = items.get(i);
             if (potion.isEmpty()) {
@@ -104,8 +109,24 @@ public abstract class MixinBrewingStandBlockEntity {
             }
         }
         ForgeEventFactory.onPotionBrewed(items);
+
+        // 副产物：龙息这类材料用完后返还玻璃瓶。原版每炼 1 瓶返 1 个，批量则返 batch 个。
+        // 语义与原版一致：材料耗尽时副产物直接占住材料槽，否则掉落到世界里。
+        ItemStack byproduct = ItemStack.EMPTY;
+        if (ingredient.hasCraftingRemainingItem()) {
+            byproduct = ingredient.getCraftingRemainingItem();
+            byproduct.setCount(batch);
+        }
         ingredient.shrink(batch);
-        items.set(BrewingBatchHelper.INGREDIENT_SLOT, ingredient);
+        if (!byproduct.isEmpty() && ingredient.isEmpty()) {
+            items.set(BrewingBatchHelper.INGREDIENT_SLOT, byproduct);
+        } else {
+            items.set(BrewingBatchHelper.INGREDIENT_SLOT, ingredient);
+            if (!byproduct.isEmpty()) {
+                Containers.dropItemStack(level, pos.getX(), pos.getY(), pos.getZ(), byproduct);
+            }
+        }
+
         level.levelEvent(BREWING_STAND_BREW_EVENT, pos, 0);
         ci.cancel();
     }

@@ -4,7 +4,7 @@
 
 **简体中文** | [English](README_EN.md)
 
-Minecraft 1.20.1 · Forge 模组 · v1.4.2
+Minecraft 1.20.1 · Forge 模组 · v1.4.3
 
 > 模组 ID：`stackablepotionsplus` ｜ 基于 CursedFlames 的 [Stackable Potions](https://modrinth.com/mod/stackablepotions)（MIT）移植增强
 
@@ -60,7 +60,7 @@ Minecraft 1.20.1 · Forge 模组 · v1.4.2
 - Minecraft Forge **47.x**（依赖声明为 `[46,)`，1.20.1 请用 47.1.0+）
 - 不需要其它前置模组
 
-把 `StackablePotionsPlus-1.20.1-1.4.2.jar` 放入 `mods` 文件夹即可。
+把 `StackablePotionsPlus-1.20.1-1.4.3.jar` 放入 `mods` 文件夹即可。
 
 > ⚠️ **与原模组不兼容**：本模组使用独立 ID `stackablepotionsplus`，**不要**与原版
 > Stackable Potions 同时安装，两者都改 `Items` 注册与药水效果合并逻辑，同时装会冲突。
@@ -196,6 +196,7 @@ config/stackablepotionsplus-common.toml
 
 | 版本 | 说明 |
 |---|---|
+| **1.4.3** | **修复批量炼制时副产物丢失**：1.4.2 接管 `doBrew` 时漏掉了原版的副产物逻辑——龙息（注册时带 `craftRemainder(GLASS_BOTTLE)`）炼完滞留药水应返还玻璃瓶，原版每瓶返 1 个，批量则应返整批。现补齐，语义与原版一致：材料耗尽时副产物直接占住材料槽，材料有剩则掉落到世界 |
 | **1.4.2** | **修复「放入足量材料后不酿造」**：Forge 的 `BrewingRecipeRegistry.getOutput` 开头即 `if (input.getCount() != 1) return EMPTY`，而 `canBrew`/`hasOutput` 都经由它 —— 于是堆叠药水在 Forge 眼里是"不可酿"的，`isBrewable` 恒为 false，`serverTick` 永远不会把 `brewTime` 置为 400，酿造台完全不启动。现批量时接管 `isBrewable` / `doBrew`，内部用单瓶副本查配方、再把整批瓶数写回产物。同时**取消耗时按批数放大**：原设计把 `brewTime` 放大 64 倍（25600 tick ≈ 21 分钟），而 GUI 进度条分母硬编码为 400，会被算成负数从而完全不可见，看起来就像没在炼 |
 | **1.4.1** | **修复「堆叠药水放不进酿造台」**：原版 `BrewingStandMenu$PotionSlot#getMaxStackSize()` 硬编码返回 1，与物品堆叠上限是两套独立限制——即使药水已是 64 堆叠，槽位仍只收 1 瓶。现由 Mixin 放开槽位容量，新增配置项 `brewing.potionSlotCapacity`（默认 64，设 1 恢复原版）。同时重写 Shift 快捷移动判定：旧实现对源堆只做 `split` 未清空，会残留物品 |
 | **1.4.0** | 新增**酿造台批量炼药**：三个药水槽各可放 64 瓶，材料数达到三槽中最多那槽的瓶数时一次性整批炼完；材料不足不点火，耗时与材料按批数换算。Mixin 全局优先级设为最高（`2147483647`），与其他修改酿造台/药水堆叠的模组冲突时以本模组为准 |
