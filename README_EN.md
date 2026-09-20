@@ -4,12 +4,12 @@
 
 [简体中文](README.md) | **English**
 
-Minecraft 1.20.1 · Forge mod · v1.4.3
+Minecraft 1.20.1 · Forge mod · v1.4.4
 
 > Mod ID: `stackablepotionsplus` | Based on [Stackable Potions](https://modrinth.com/mod/stackablepotions) by CursedFlames (MIT)
 
 Makes vanilla potions truly **stackable and buffable**: potions stack into a single pile, drinking
-consumes only one bottle and returns the glass bottle, splash/lingering potions lose their use cooldown,
+consumes only one bottle and returns the glass bottle, the brewing stand brews whole batches,
 and re-applying the same potion effect **extends its duration and raises its level**. Every value is
 configurable.
 
@@ -20,17 +20,16 @@ configurable.
 **Stackable Potions Plus** turns potions from one-shot consumables into a resource you can stockpile
 and grow stronger.
 
-In vanilla Minecraft a potion stack holds a single bottle, splash potions carry a 1-second use cooldown,
-and drinking the same potion again only refreshes its duration instead of making it stronger. This mod
-reworks all three, and adds the supporting behaviour potion stacking needs:
+In vanilla Minecraft a potion stack holds a single bottle, drinking the same potion again only refreshes
+its duration instead of making it stronger, and the brewing stand brews one bottle at a time. This mod
+reworks those, and adds the supporting behaviour potion stacking needs:
 
 | | Vanilla | This mod |
 |---|---|---|
 | Potion stack size | 1 bottle | **64 bottles** (regular · splash · lingering) |
-| Splash / lingering potions | 1s use cooldown | **No cooldown**, throw freely |
 | Re-applying the same effect | Duration refreshed only | **Duration adds up + level increases** |
 | Drinking from a stack | — | **Consumes 1 bottle, returns a glass bottle** |
-| Brewing stand | — | Shift-click moves potion stacks |
+| Brewing stand | 1 bottle per slot, one at a time | **64 per slot + whole-batch brewing**, Shift-click moves stacks |
 
 On top of that, the mod is fully configurable: level cap, duration cap, infinite duration, whether
 negative effects take part in stacking, and short-window stacking for instant effects.
@@ -45,7 +44,7 @@ the stronger you get" playstyle.
 | Feature | Default | Configurable |
 |---|---|---|
 | Potions stack | Up to 64 per stack (vanilla: 1) | Fixed (64) |
-| Splash/lingering potions have no use cooldown | No cooldown (vanilla: 1s) | ✅ `enableCooldown` |
+| Splash potion use cooldown (optional) | Off (vanilla has none) | ✅ `enableCooldown` |
 | Drinking returns a glass bottle, consumes one bottle | On | Fixed |
 | Brewing stand shift-click support | On | Fixed |
 | **Brewing stand slot capacity** | 64 bottles per slot (vanilla hardcodes 1) | ✅ `potionSlotCapacity` |
@@ -65,7 +64,7 @@ the stronger you get" playstyle.
 - Minecraft Forge **47.x** (declared as `[46,)`; use 47.1.0+ on 1.20.1)
 - No other dependencies
 
-Drop `StackablePotionsPlus-1.20.1-1.4.3.jar` into your `mods` folder.
+Drop `StackablePotionsPlus-1.20.1-1.4.4.jar` into your `mods` folder.
 
 > ⚠️ **Not compatible with the original mod.** This mod uses its own ID `stackablepotionsplus`.
 > Do **not** install it alongside the original Stackable Potions — both modify `Items` registration
@@ -100,7 +99,13 @@ Comments in the generated file are written in Chinese. Changes require **restart
 
 | Key | Default | Range | Description |
 |---|---|---|---|
-| `enableCooldown` | `false` | `true / false` | Re-enables the vanilla 1-second (20 tick) cooldown on splash/lingering potions. Off by default (this mod removes it) |
+| `enableCooldown` | `false` | `true / false` | **Adds** a 1-second (20 tick) use cooldown to splash potions. Off by default, which matches vanilla |
+
+> ⚠️ **Note**: vanilla 1.20.1 throwable potions (`ThrowablePotionItem`) have **no** use cooldown at all
+> — verified against bytecode: across the whole `net.minecraft.world.item` package only
+> `ChorusFruitItem`, `EnderpearlItem` and `InstrumentItem` call `ItemCooldowns.addCooldown`, and no
+> potion item does. So this option **adds** a restriction rather than restoring a vanilla one, and it
+> currently applies to splash potions only — **lingering potions are unaffected**.
 
 ### Default config
 
@@ -114,6 +119,9 @@ Comments in the generated file are written in Chinese. Changes require **restart
 	instantStackWindowSeconds = 1.0
 
 [cooldown]
+	#为喷溅药水启用 1 秒（20 tick）使用冷却。默认关闭。
+	#注意：原版 1.20.1 的投掷类药水本身没有使用冷却，本项是「新增」而非「恢复」原版限制。
+	#当前仅对喷溅药水生效，滞留药水不受影响。
 	enableCooldown = false
 ```
 
@@ -140,7 +148,7 @@ When a player or mob **already has** a potion effect and gains the same effect a
 With `stackNegativeEffects = false`, poison, slowness, weakness and friends keep vanilla behaviour:
 re-applying takes the stronger or longer version without escalating levels.
 
-Set it to `true` to make negatives stack too — combined with 64-stacking and no cooldown, you can
+Set it to `true` to make negatives stack too — combined with 64-stacking, you can
 pelt a mob group with poison and push it all the way to level V.
 
 ### 3. Glass bottle return
@@ -205,6 +213,7 @@ readable.
 
 | Version | Notes |
 |---|---|
+| **1.4.4** | **Fixed two regressions caused by missing branches when taking over vanilla methods** (found by auditing every mixin against the vanilla implementation, the same technique used for 1.4.2/1.4.3):<br>① **Infinite-duration potions shortened existing buffs** — in `MobEffectInstance.update`, `this.duration + other.getDuration()` becomes `this.duration - 1` when `other.getDuration() == -1` (infinite), so drinking an infinite-duration Speed potion turned a 10-second Speed buff into 9.95 seconds. Vanilla routes through `isShorterDurationThan()`, which already checks `isInfiniteDuration()`; that layer was missing. Now "either side infinite ⇒ result infinite" is enforced.<br>② **Drinking potions no longer triggered sculk sensors / wardens** — `user.gameEvent(GameEvent.DRINK)` sits after the injection point in `PotionItem.finishUsingItem` and was swallowed by `cir.cancel()`. The event is now re-emitted inside the callback.<br>Also corrected the docs: vanilla 1.20.1 throwable potions have **no** use cooldown at all (verified against bytecode), so `enableCooldown` adds a restriction rather than restoring one, and it applies to splash potions only |
 | **1.4.3** | **Fixed lost byproducts during batch brewing**: the 1.4.2 `doBrew` takeover missed vanilla's crafting-remainder handling — dragon's breath (registered with `craftRemainder(GLASS_BOTTLE)`) should return a glass bottle per brewed lingering potion, so a batch should return the whole batch. Now restored with vanilla semantics: when the ingredient runs out the byproduct takes over the ingredient slot, otherwise it is dropped into the world |
 | **1.4.2** | **Fixed "full ingredients but no brewing"**: Forge's `BrewingRecipeRegistry.getOutput` starts with `if (input.getCount() != 1) return EMPTY`, and both `canBrew` and `hasOutput` go through it — so stacked potions are "unbrewable" as far as Forge is concerned: `isBrewable` is permanently false and `serverTick` never sets `brewTime` to 400, leaving the stand idle. This mod now takes over `isBrewable` / `doBrew` for batches: recipes are queried with a single-bottle copy and the full batch count is written back to the output. Also **removed the brew-time scaling** — the old design multiplied `brewTime` by the batch size (25600 ticks ≈ 21 min for 64 bottles), while the GUI progress bar divides by a hardcoded 400, producing a negative width that renders nothing at all |
 | **1.4.1** | **Fixed "stacked potions can't be placed into the brewing stand"**: vanilla `BrewingStandMenu$PotionSlot#getMaxStackSize()` is hardcoded to return 1 — a separate limit from the item's stack size, so the slot still accepted only one bottle even with 64-stack potions. The slot capacity is now opened up via Mixin, with a new config option `brewing.potionSlotCapacity` (default 64; set to 1 for vanilla behaviour). Also rewrote the shift-click transfer check — the previous implementation only called `split` on the source stack without clearing it, leaving leftover items |
@@ -216,7 +225,7 @@ readable.
 | **1.1.1** | Removed the stack-size config option (it could never work: item registration runs before the config loads, so stack size is now fixed at 64); added numeric level display |
 | **1.1.0** | Full config support, Chinese comments; `maxAmplifier`, `durationCapSeconds`, `enableCooldown`, `infiniteDuration`, `stackNegativeEffects`; added zh_cn / en_us lang files |
 | **1.0.2** | Effect stacking: duration adds up, level increases up to V |
-| **1.0.1** | Potion stack size 16 → 64; removed the 1s cooldown on splash/lingering potions |
+| **1.0.1** | Potion stack size 16 → 64 (this entry originally also claimed "removed the 1s cooldown on splash/lingering potions"; vanilla 1.20.1 has no such cooldown, so that claim does not hold — see 1.4.4) |
 | **1.0.0** | Original mod by CursedFlames: potions stack to 16 |
 
 > 1.0.0 is the original 1.20.1 Forge release by CursedFlames. 1.0.1 and later are developed in this

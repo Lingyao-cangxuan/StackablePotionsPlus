@@ -32,7 +32,11 @@ public abstract class MixinMobEffectInstance {
         if (!Config.stackNegativeEffects.get() && !this.effect.isBeneficial()) {
             return;
         }
-        if (Config.infiniteDuration.get() || this.duration == -1) {
+        // 任一方为无限时长（duration == -1），叠加结果都必须是无限时长。
+        // 原版此处走 isShorterDurationThan()，该方法内部就判了 isInfiniteDuration()；
+        // 若漏判 other，`this.duration + other.getDuration()` 会算成 `this.duration - 1`，
+        // 反而把已有的有限时长 buff 缩短 1 tick。
+        if (Config.infiniteDuration.get() || this.duration == -1 || other.isInfiniteDuration()) {
             this.duration = -1;
         } else {
             long capTicks = Config.durationCapSeconds.get() > 0

@@ -10,6 +10,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.PotionItem;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.gameevent.GameEvent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -23,6 +24,10 @@ public abstract class MixinPotionItem {
         if (user instanceof Player) {
             ((Player) user).getInventory().add(Items.GLASS_BOTTLE.getDefaultInstance());
         }
+        // 原版在 `return stack` 之前会广播 GameEvent.DRINK（幽匿感测体/监守者靠它侦测饮用）。
+        // 本注入点在它之前且会 cancel，必须在此手动补回，否则该事件整条丢失。
+        // 注：单瓶（stack 已空）时原版在到达本注入点之前就 areturn 了，走不到这里，故那条路径不受影响。
+        user.gameEvent(GameEvent.DRINK);
         cir.setReturnValue(stack);
     }
 
