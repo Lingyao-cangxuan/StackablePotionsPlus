@@ -54,6 +54,7 @@ the stronger you get" playstyle.
 | Infinite duration (effects never expire) | Off | ✅ `infiniteDuration` |
 | Negative effects also stack | Off (vanilla behaviour kept) | ✅ `stackNegativeEffects` |
 | Instant effect short-window stacking (heal/damage) | Off | ✅ `enableInstantStacking` + `instantStackWindowSeconds` |
+| **Which sources trigger stacking** | Player drinking/throwing a potion only | ✅ `stackTrigger` |
 | Numeric display for high effect levels | Levels above 10 shown as Arabic numerals | Fixed |
 
 ---
@@ -64,7 +65,7 @@ the stronger you get" playstyle.
 - Minecraft Forge **47.x** (declared as `[46,)`; use 47.1.0+ on 1.20.1)
 - No other dependencies
 
-Drop `StackablePotionsPlus-1.20.1-1.4.4.jar` into your `mods` folder.
+Drop `StackablePotionsPlus-1.20.1-1.4.5.jar` into your `mods` folder.
 
 > ⚠️ **Not compatible with the original mod.** This mod uses its own ID `stackablepotionsplus`.
 > Do **not** install it alongside the original Stackable Potions — both modify `Items` registration
@@ -94,6 +95,7 @@ Comments in the generated file are written in Chinese. Changes require **restart
 | `stackNegativeEffects` | `false` | `true / false` | Whether negative effects (poison, slowness, weakness, wither…) also stack level and duration. Off by default: negatives keep vanilla behaviour (take the stronger/longer one, no level escalation) |
 | `enableInstantStacking` | `false` | `true / false` | Whether **instant effects** (instant health / instant damage) get stronger when applied repeatedly in a short window. Off by default |
 | `instantStackWindowSeconds` | `1.0` | `0.1 ~ 60.0` | Time window (seconds) for instant effect stacking. Applied repeatedly to the same target within the window, each application adds +1 to the level; outside the window the counter resets |
+| `stackTrigger` | `POTION_USE_ONLY` | `POTION_USE_ONLY / ALL` | Which **sources** may trigger stacking. `POTION_USE_ONLY` (recommended): only when a player drinks or throws a potion; every other source falls back to vanilla "stronger / longer wins". `ALL`: any source stacks (1.4.4 and earlier behaviour, **risks runaway levels**). See "Trigger sources" below |
 
 #### 2. Use cooldown (`cooldown`)
 
@@ -117,6 +119,8 @@ Comments in the generated file are written in Chinese. Changes require **restart
 	stackNegativeEffects = false
 	enableInstantStacking = false
 	instantStackWindowSeconds = 1.0
+	#POTION_USE_ONLY (default) / ALL
+	stackTrigger = "POTION_USE_ONLY"
 
 [cooldown]
 	#为喷溅药水启用 1 秒（20 tick）使用冷却。默认关闭。
@@ -142,6 +146,30 @@ When a player or mob **already has** a potion effect and gains the same effect a
 - **Infinite**: with `infiniteDuration = true`, the stacked duration is set to infinite
   (`duration = -1`, equivalent to `/effect give ... infinite`). The HUD shows an infinity symbol
   and the effect never ticks down.
+
+#### Trigger sources: which applications actually stack
+
+Stacking hooks `MobEffectInstance#update()`, which is the point **every** mod passes through when
+applying an effect to an entity. Its signature only carries the two effect instances, so there is
+**no way to tell who is applying**. Without a filter, any mod that applies an effect **every game
+tick** (common among trinket/accessory mods) pushes the level up by 1 per tick and piles duration
+on top, reaching `maxAmplifier` within seconds.
+
+This mod therefore enables stacking only along the **player actively uses a potion** call chain
+(`stackTrigger = POTION_USE_ONLY`, the default):
+
+| Source | Stacks? |
+|---|---|
+| Player drinks a potion | ✅ yes (including potions from other mods that extend `PotionItem`) |
+| Player throws a splash/lingering potion | ✅ yes (once per affected target) |
+| Trinket mods / passive effects / continuously applied flasks | ❌ vanilla "stronger / longer wins" |
+| `/effect give` command | ❌ same |
+| Standing inside a lingering potion cloud | ❌ the cloud is a continuous source applying every `waitTime` — stacking would run away |
+| Mobs applying effects to themselves (e.g. a witch) | ❌ same |
+
+> Setting `stackTrigger` to `ALL` restores the 1.4.4-and-earlier behaviour (any source stacks).
+> If your pack contains a mod that applies effects every tick, levels will hit the cap almost
+> instantly — generally not what you want.
 
 ### 2. Negative effects stay vanilla by default
 
@@ -213,6 +241,7 @@ readable.
 
 | Version | Notes |
 |---|---|
+| **1.4.5** | **Fixed runaway effect levels in modpacks where another mod keeps re-applying an effect**: stacking hooks `MobEffectInstance#update()`, the point every mod passes through when applying an effect — its signature carries no information about the source. Previously any matching effect stacked, so a mod applying an effect every game tick (common among trinket mods) pushed the level toward `maxAmplifier` at **20 levels per second**. A **trigger gate** was added: stacking only happens along the player-actively-using-a-potion call chain; every other source (trinkets, commands, lingering clouds, mobs buffing themselves) falls back to vanilla "stronger / longer wins". New option `stackTrigger` (default `POTION_USE_ONLY`; `ALL` restores the old behaviour)<br>Also fixed a **flag leak** that only surfaced while implementing the gate: the `return` generated by the `finishUsingItem` cancel-injection is created *after* the `@At("RETURN")` injection and is therefore **not covered by it**, so every stacked-potion drink leaked one flag, making subsequent external applications look like player-driven use — that leak alone reproduces the runaway behaviour |
 | **1.4.4** | **Fixed two regressions caused by missing branches when taking over vanilla methods** (found by auditing every mixin against the vanilla implementation, the same technique used for 1.4.2/1.4.3):<br>① **Infinite-duration potions shortened existing buffs** — in `MobEffectInstance.update`, `this.duration + other.getDuration()` becomes `this.duration - 1` when `other.getDuration() == -1` (infinite), so drinking an infinite-duration Speed potion turned a 10-second Speed buff into 9.95 seconds. Vanilla routes through `isShorterDurationThan()`, which already checks `isInfiniteDuration()`; that layer was missing. Now "either side infinite ⇒ result infinite" is enforced.<br>② **Drinking potions no longer triggered sculk sensors / wardens** — `user.gameEvent(GameEvent.DRINK)` sits after the injection point in `PotionItem.finishUsingItem` and was swallowed by `cir.cancel()`. The event is now re-emitted inside the callback.<br>Also corrected the docs: vanilla 1.20.1 throwable potions have **no** use cooldown at all (verified against bytecode), so `enableCooldown` adds a restriction rather than restoring one, and it applies to splash potions only |
 | **1.4.3** | **Fixed lost byproducts during batch brewing**: the 1.4.2 `doBrew` takeover missed vanilla's crafting-remainder handling — dragon's breath (registered with `craftRemainder(GLASS_BOTTLE)`) should return a glass bottle per brewed lingering potion, so a batch should return the whole batch. Now restored with vanilla semantics: when the ingredient runs out the byproduct takes over the ingredient slot, otherwise it is dropped into the world |
 | **1.4.2** | **Fixed "full ingredients but no brewing"**: Forge's `BrewingRecipeRegistry.getOutput` starts with `if (input.getCount() != 1) return EMPTY`, and both `canBrew` and `hasOutput` go through it — so stacked potions are "unbrewable" as far as Forge is concerned: `isBrewable` is permanently false and `serverTick` never sets `brewTime` to 400, leaving the stand idle. This mod now takes over `isBrewable` / `doBrew` for batches: recipes are queried with a single-bottle copy and the full batch count is written back to the output. Also **removed the brew-time scaling** — the old design multiplied `brewTime` by the batch size (25600 ticks ≈ 21 min for 64 bottles), while the GUI progress bar divides by a hardcoded 400, producing a negative width that renders nothing at all |

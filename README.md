@@ -49,6 +49,7 @@ Minecraft 1.20.1 · Forge 模组 · v1.4.4
 | 无限时长（效果永不衰减） | 关闭 | ✅ `infiniteDuration` |
 | 负面效果也参与叠加 | 关闭（负面保持原版行为） | ✅ `stackNegativeEffects` |
 | 瞬间效果短窗口叠加（治疗/伤害连发增强） | 关闭 | ✅ `enableInstantStacking` + `instantStackWindowSeconds` |
+| **叠加的触发来源** | 仅玩家主动饮用/投掷药水时叠加 | ✅ `stackTrigger` |
 | 高等级效果显示数字等级 | > 10 级时以阿拉伯数字显示 | 固定 |
 
 ---
@@ -59,7 +60,7 @@ Minecraft 1.20.1 · Forge 模组 · v1.4.4
 - Minecraft Forge **47.x**（依赖声明为 `[46,)`，1.20.1 请用 47.1.0+）
 - 不需要其它前置模组
 
-把 `StackablePotionsPlus-1.20.1-1.4.4.jar` 放入 `mods` 文件夹即可。
+把 `StackablePotionsPlus-1.20.1-1.4.5.jar` 放入 `mods` 文件夹即可。
 
 > ⚠️ **与原模组不兼容**：本模组使用独立 ID `stackablepotionsplus`，**不要**与原版
 > Stackable Potions 同时安装，两者都改 `Items` 注册与药水效果合并逻辑，同时装会冲突。
@@ -88,6 +89,7 @@ config/stackablepotionsplus-common.toml
 | `stackNegativeEffects` | `false` | `true / false` | 是否允许负面效果（中毒、缓慢、虚弱、凋零等）也叠加等级与时长。默认关闭：负面效果保持原版行为（取更强/更久，不逐级叠加） |
 | `enableInstantStacking` | `false` | `true / false` | 是否允许**瞬间效果**（瞬间治疗、瞬间伤害）在短时间内被连续施加时逐级增强。默认关闭 |
 | `instantStackWindowSeconds` | `1.0` | `0.1 ~ 60.0` | 瞬间效果叠加的判定时间窗口（秒）。在该窗口内连续对同一目标施加同种瞬间效果，每次强度 +1，超过窗口则重新计数 |
+| `stackTrigger` | `POTION_USE_ONLY` | `POTION_USE_ONLY / ALL` | 决定**哪些来源**施加的效果会触发叠加。`POTION_USE_ONLY`（推荐）：仅玩家主动饮用/投掷药水时叠加，其余来源一律走原版「取更强/更久」。`ALL`：任何来源都叠加（1.4.4 及更早的行为，**有等级失控风险**）。详见下方「触发来源」小节 |
 
 #### 2. 使用冷却设置（`cooldown` 分组）
 
@@ -116,6 +118,8 @@ config/stackablepotionsplus-common.toml
 	enableInstantStacking = false
 	#瞬间效果叠加的时间窗口（单位：秒）
 	instantStackWindowSeconds = 1.0
+	#叠加触发来源：POTION_USE_ONLY（默认，仅玩家主动饮用/投掷药水时叠加）/ ALL（任何来源都叠加，旧行为）
+	stackTrigger = "POTION_USE_ONLY"
 
 [cooldown]
 	#为喷溅药水启用 1 秒（20 tick）使用冷却。默认关闭。
@@ -140,6 +144,26 @@ config/stackablepotionsplus-common.toml
   - 上限由 `maxAmplifier` 控制，默认 `4` 即 V 级封顶；满级后继续喝只续时长、不再升。
 - **无限**：若 `infiniteDuration = true`，叠加后的时长直接置为**无限**（游戏内 `duration = -1`，
   等价于指令 `/effect give ... infinite`），效果图标会显示为无限符号且永不衰减。
+
+#### 触发来源：哪些施加才会叠加
+
+叠加挂在 `MobEffectInstance#update()` 上，而这是**任何**模组给实体加效果时都会经过的汇聚点，
+方法签名里只有两个效果实例，**拿不到"谁在施加"**。若不加以区分，任何**每个游戏刻都施加一次效果**
+的模组（饰品类很常见）都会让等级每 tick +1、时长每 tick 累加，几秒内冲到 `maxAmplifier` 上限。
+
+因此本模组默认只在**玩家主动使用药水**的调用链上启用叠加（`stackTrigger = POTION_USE_ONLY`）：
+
+| 施加来源 | 是否叠加 |
+|---|---|
+| 玩家饮用普通药水 | ✅ 叠加（含其它模组继承 `PotionItem` 的药水） |
+| 玩家投掷喷溅/滞留药水命中 | ✅ 叠加（对范围内每个目标各叠一次） |
+| 饰品模组 / 被动效果 / 持续生效类药水袋 | ❌ 走原版「取更强、取更久」 |
+| `/effect give` 指令 | ❌ 同上 |
+| 待在滞留药水云里持续受效 | ❌ 云是持续源，每 `waitTime` 施放一次，叠加会失控 |
+| 生物自行施加（如女巫给自己加效果） | ❌ 同上 |
+
+> `stackTrigger` 改成 `ALL` 可恢复 1.4.4 及更早的行为（任何来源都叠加）。但若整合包内存在
+> 每 tick 施加效果的模组，等级会瞬间顶到上限，一般不建议。
 
 ### 2. 负面效果默认不叠加
 
@@ -202,6 +226,7 @@ config/stackablepotionsplus-common.toml
 
 | 版本 | 说明 |
 |---|---|
+| **1.4.5** | **修复整合包中「其他模组持续赋予效果导致等级极速上叠」**：叠加挂在 `MobEffectInstance#update()` 上，而这是任何模组施加效果都会经过的汇聚点，签名里拿不到来源——此前只要效果相同就叠加，于是每个游戏刻施加一次效果的模组（饰品类很常见）会让等级以 **20 级/秒**冲向 `maxAmplifier` 上限。现新增**来源门控**：只在玩家主动饮用/投掷药水的调用链上叠加，其余来源（饰品、命令、滞留云、生物自主施加）一律走原版「取更强/更久」。新增配置项 `stackTrigger`（默认 `POTION_USE_ONLY`，设 `ALL` 可恢复旧行为）<br>另修复一处门控实现中才暴露的**标记泄漏**：`finishUsingItem` 的 cancel 注入所生成的 `return` 晚于 `@At("RETURN")` 注入，**不会被其覆盖**，导致每次饮用堆叠药水都泄漏一次标记，使随后的外部施加被误判为玩家主动使用——该泄漏本身即可复现出上述失控现象 |
 | **1.4.4** | **修复两处接管原版方法时漏分支导致的回归**（沿用 1.4.2/1.4.3 的方法，逐条对照原版实现后复查全部 Mixin 发现）：<br>① **无限时长的药水会把已有 buff 缩短** —— `MobEffectInstance.update` 里 `this.duration + other.getDuration()` 在 `other.getDuration() == -1`（无限时长）时会算成 `this.duration - 1`，导致「喝一瓶无限时长速度」反而把身上 10 秒的速度变成 9.95 秒。原版此处走 `isShorterDurationThan()`，而该方法内部本就判了 `isInfiniteDuration()`，本模组漏了这一层。现已补上「任一方无限则结果无限」的判定。<br>② **喝药水不再触发幽匿感测体／监守者** —— `PotionItem.finishUsingItem` 末尾的 `user.gameEvent(GameEvent.DRINK)` 在注入点之后，被 `cir.cancel()` 一并吞掉。现已在回调内手动补回该事件。<br>另订正文档：原版 1.20.1 的投掷类药水**本来就没有**使用冷却（已核对字节码），`enableCooldown` 是新增限制而非"恢复原版"，且只对喷溅药水生效 |
 | **1.4.3** | **修复批量炼制时副产物丢失**：1.4.2 接管 `doBrew` 时漏掉了原版的副产物逻辑——龙息（注册时带 `craftRemainder(GLASS_BOTTLE)`）炼完滞留药水应返还玻璃瓶，原版每瓶返 1 个，批量则应返整批。现补齐，语义与原版一致：材料耗尽时副产物直接占住材料槽，材料有剩则掉落到世界 |
 | **1.4.2** | **修复「放入足量材料后不酿造」**：Forge 的 `BrewingRecipeRegistry.getOutput` 开头即 `if (input.getCount() != 1) return EMPTY`，而 `canBrew`/`hasOutput` 都经由它 —— 于是堆叠药水在 Forge 眼里是"不可酿"的，`isBrewable` 恒为 false，`serverTick` 永远不会把 `brewTime` 置为 400，酿造台完全不启动。现批量时接管 `isBrewable` / `doBrew`，内部用单瓶副本查配方、再把整批瓶数写回产物。同时**取消耗时按批数放大**：原设计把 `brewTime` 放大 64 倍（25600 tick ≈ 21 分钟），而 GUI 进度条分母硬编码为 400，会被算成负数从而完全不可见，看起来就像没在炼 |

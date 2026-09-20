@@ -21,6 +21,14 @@ public final class InstantStackHelper {
         if (effect == null || target == null || !Config.enableInstantStacking.get()) {
             return incoming;
         }
+        // 来源门控：与 MixinMobEffectInstance 同理。这里的调用方有三个——
+        // PotionItem#finishUsingItem、ThrownPotion#applySplash 属于玩家主动使用（有标记）；
+        // AreaEffectCloud#tick 是持续源（每 waitTime 施放一次，无标记），
+        // 不挡的话待在一团滞留云里就能把瞬间效果等级一路刷上去。
+        if (Config.stackTrigger.get() == Config.StackTrigger.POTION_USE_ONLY
+                && !StackSourceContext.isActive()) {
+            return incoming;
+        }
         Level level = target.level();
         if (level.isClientSide) {
             return incoming;

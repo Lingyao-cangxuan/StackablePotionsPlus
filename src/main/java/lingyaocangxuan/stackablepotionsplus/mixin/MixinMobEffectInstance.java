@@ -2,6 +2,7 @@
 package lingyaocangxuan.stackablepotionsplus.mixin;
 
 import lingyaocangxuan.stackablepotionsplus.Config;
+import lingyaocangxuan.stackablepotionsplus.StackSourceContext;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import org.spongepowered.asm.mixin.Final;
@@ -27,6 +28,14 @@ public abstract class MixinMobEffectInstance {
     @Inject(method = "update(Lnet/minecraft/world/effect/MobEffectInstance;)Z", at = @At("HEAD"), cancellable = true)
     private void stackEffectOnUpdate(MobEffectInstance other, CallbackInfoReturnable<Boolean> cir) {
         if (other == null || other.getEffect() != this.effect) {
+            return;
+        }
+        // 来源门控：本方法是所有来源的汇聚点，签名里拿不到「谁在施加」。
+        // 若不加以区分，任何每 tick 施加一次效果的模组（饰品类很常见）都会让
+        // amplifier 每 tick +1、duration 每 tick 累加，数秒内冲顶。
+        // 默认只在玩家主动饮用/投掷药水的调用链内接管，其余来源交给原版处理。
+        if (Config.stackTrigger.get() == Config.StackTrigger.POTION_USE_ONLY
+                && !StackSourceContext.isActive()) {
             return;
         }
         if (!Config.stackNegativeEffects.get() && !this.effect.isBeneficial()) {

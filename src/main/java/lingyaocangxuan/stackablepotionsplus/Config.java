@@ -13,7 +13,16 @@ public class Config {
     public static final ForgeConfigSpec.BooleanValue stackNegativeEffects;
     public static final ForgeConfigSpec.BooleanValue enableInstantStacking;
     public static final ForgeConfigSpec.DoubleValue instantStackWindowSeconds;
+    public static final ForgeConfigSpec.EnumValue<StackTrigger> stackTrigger;
     public static final ForgeConfigSpec.IntValue potionSlotCapacity;
+
+    /** 决定哪些来源施加的效果会触发「叠加时长与等级」。 */
+    public enum StackTrigger {
+        /** 仅玩家主动饮用/投掷药水时叠加；其余来源走原版行为。（默认，推荐） */
+        POTION_USE_ONLY,
+        /** 任何来源施加同种效果都叠加。（旧行为，有失控风险） */
+        ALL
+    }
 
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
@@ -59,6 +68,26 @@ public class Config {
                         "Instant stacking time window in seconds")
                 .translation("stackablepotionsplus.configuration.instantStackWindowSeconds")
                 .defineInRange("instantStackWindowSeconds", 1.0, 0.1, 60.0);
+        stackTrigger = builder
+                .comment("决定哪些来源施加的药水效果会触发「叠加时长 + 提升等级」。",
+                        "",
+                        "POTION_USE_ONLY（默认，推荐）：",
+                        "  仅当玩家主动饮用或投掷药水时叠加。",
+                        "  其他模组（饰品、被动效果）、/effect 命令、环境效果等直接施加的效果",
+                        "  一律走原版行为（取更强/更久，不累加）。",
+                        "  这一项是为了防止「每游戏刻施加一次效果」的模组把等级瞬间顶到 maxAmplifier 上限。",
+                        "  注意：叠加需要「有玩家参与」——生物自行饮用（如女巫）不触发。",
+                        "",
+                        "ALL：",
+                        "  任何来源施加同种效果都叠加，等同于本模组 1.4.4 及更早的行为。",
+                        "  警告：若整合包内存在每 tick 施加效果的模组（常见于饰品类），",
+                        "  等级会在数秒内冲到 maxAmplifier 上限，通常不是你想要的结果。",
+                        "",
+                        "Which sources may trigger effect stacking.",
+                        "POTION_USE_ONLY: only when a player drinks or throws a potion (recommended).",
+                        "ALL: any source stacks (legacy behaviour, may run away).")
+                .translation("stackablepotionsplus.configuration.stackTrigger")
+                .defineEnum("stackTrigger", StackTrigger.POTION_USE_ONLY);
         builder.pop();
 
         builder.comment("使用冷却设置", "Cooldown settings")

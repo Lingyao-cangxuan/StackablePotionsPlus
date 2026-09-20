@@ -6,5 +6,6 @@
     "stackablepotionsplus.configuration.enableInstantStacking": "Stack instant effects (heal/damage)",
     "stackablepotionsplus.configuration.instantStackWindowSeconds": "Instant stack window (seconds)",
     "stackablepotionsplus.configuration.enableCooldown": "Enable 1s use cooldown",
+    "stackablepotionsplus.configuration.stackTrigger": "Stacking trigger source",
     "stackablepotionsplus.configuration.potionSlotCapacity": "Brewing stand potion slot capacity (bottles)"
 }
