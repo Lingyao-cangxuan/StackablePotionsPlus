@@ -4,7 +4,7 @@
 
 **简体中文** | [English](README_EN.md)
 
-Minecraft 1.20.1 · Forge 模组 · v1.5.1
+Minecraft 1.20.1 · Forge 模组 · v1.5.2
 
 > 模组 ID：`stackablepotionsplus` ｜ 基于 CursedFlames 的 [Stackable Potions](https://modrinth.com/mod/stackablepotions)（MIT）移植增强
 
@@ -41,7 +41,7 @@ Minecraft 1.20.1 · Forge 模组 · v1.5.1
 |---|---|---|
 | 药水可堆叠 | 最多 64 个一组（原版 1 个） | ✅ `potionStackSize`（1~64） |
 | **图形配置界面** | 主菜单 → 模组 → 配置 | 固定 |
-| 喷溅药水使用冷却（可选） | 关闭（原版本身无冷却） | ✅ `enableCooldown` |
+| 投掷药水使用冷却（可选，喷溅 / 滞留） | 关闭（原版本身无冷却） | ✅ `enableCooldown` |
 | 喝药水返还玻璃瓶、不消耗整组 | 开启 | 固定 |
 | 酿造台可快捷移动堆叠药水 | 开启 | 固定 |
 | **酿造台药水槽容量** | 每槽 64 瓶（原版硬编码为 1） | ✅ `potionSlotCapacity` |
@@ -62,7 +62,7 @@ Minecraft 1.20.1 · Forge 模组 · v1.5.1
 - Minecraft Forge **47.x**（依赖声明为 `[46,)`，1.20.1 请用 47.1.0+）
 - 不需要其它前置模组
 
-把 `StackablePotionsPlus-1.20.1-1.5.1.jar` 放入 `mods` 文件夹即可。
+把 `StackablePotionsPlus-1.20.1-1.5.2.jar` 放入 `mods` 文件夹即可。
 
 > ⚠️ **与原模组不兼容**：本模组使用独立 ID `stackablepotionsplus`，**不要**与原版
 > Stackable Potions 同时安装，两者都改 `Items` 注册与药水效果合并逻辑，同时装会冲突。
@@ -134,12 +134,12 @@ config/stackablepotionsplus-common.toml
 
 | 键 | 默认值 | 取值范围 | 说明 |
 |---|---|---|---|
-| `enableCooldown` | `false` | `true / false` | 为喷溅药水**新增** 1 秒（20 tick）使用冷却。默认关闭，即与原版一致 |
+| `enableCooldown` | `false` | `true / false` | 为投掷类药水（喷溅 / 滞留）**新增** 1 秒（20 tick）使用冷却。默认关闭，即与原版一致 |
 
 > ⚠️ **说明**：原版 1.20.1 的投掷类药水（`ThrowablePotionItem`）本身**没有**使用冷却
 > —— 已核对字节码，整个 `net.minecraft.world.item` 包里只有紫颂果、末影珍珠、山羊角调用
 > `ItemCooldowns.addCooldown`，没有任何药水物品。所以本项是**新增**限制而非"恢复原版"，
-> 且当前只对喷溅药水生效，**滞留药水不受影响**。
+> 本项对喷溅与滞留**两者都生效**（1.5.2 起；1.5.1 及更早只对喷溅生效）。
 
 ### 默认配置全文
 
@@ -175,9 +175,9 @@ config/stackablepotionsplus-common.toml
 	stackTrigger = "POTION_USE_ONLY"
 
 [cooldown]
-	#为喷溅药水启用 1 秒（20 tick）使用冷却。默认关闭。
+	#为投掷类药水（喷溅 / 滞留）启用 1 秒（20 tick）使用冷却。默认关闭。
 	#注意：原版 1.20.1 的投掷类药水本身没有使用冷却，本项是「新增」而非「恢复」原版限制。
-	#当前仅对喷溅药水生效，滞留药水不受影响。
+	#1.5.2 起喷溅与滞留都生效；1.5.1 及更早只对喷溅生效。
 	enableCooldown = false
 ```
 
@@ -299,9 +299,10 @@ config/stackablepotionsplus-common.toml
 | 版本 | 说明 |
 |---|---|
 | **1.5.1** | **修复配置界面里两个只有真机操作才会暴露的问题**：<br>① **点过一次「重新载入」之后，「保存配置」永久失效** —— 原实现用了 `ForgeConfigSpec#acceptConfig(临时文件)`，而那个方法会把 spec 的后备 `Config` **整个换成传进来的对象**；临时对象在 `finally` 里被 `close()` 之后，spec 的后备对象就是个已关闭的文件，之后每次 `SPEC.save()` 都抛 `IllegalStateException: Cannot save a closed FileConfig`。现改为「读临时文件 → `correct()` 校正 → 逐项 `set()` 灌回内存」，spec 的后备对象始终是 Forge 自己那个，`save()` 一直可用<br>② **拖动滑块会把整个 TOML 重写几十遍** —— Forge 的模组配置对象带**自动保存**，`ConfigValue#set()` 会顺手把整份文件写回磁盘，而滑块原本在拖动过程中逐帧调用 `set()`。现改为**松手时才提交一次**，拖动过程只刷新标签<br>另：玩家手写的越界值（如 `potionStackSize = 200` / `-5`）在「重新载入」时按 Forge 自己的规则被夹到区间端点（`64` / `1`）并记 WARN 日志，非法枚举与类型不符的项回落默认值，全程不抛异常；`保存配置` 与关闭界面时的自动落盘都补了异常兜底，写失败会在界面底部给出提示而不是崩掉 |
+| **1.5.2** | **滞留药水也纳入「使用冷却」**：`cooldown.enableCooldown` 此前只对喷溅药水生效，滞留药水完全不受影响 —— 原因是喷溅与滞留**各自覆盖**了 `ThrowablePotionItem#use`，只注入父类抓不到子类的重写。现新增 `MixinLingeringPotionItem` 与喷溅那个对称，并把「配置开关 + 20 tick 冷却」抽到 `ThrowCooldownHelper` 单一实现，两处 Mixin 都调它<br>顺带订正文档与配置注释（原来写着「当前仅对喷溅药水生效」），界面标签由「喷溅使用冷却」改为「投掷使用冷却」 |
 | **1.5.0** | **新增图形配置界面 + 可配置的堆叠数量**：<br>① 新增配置项 `general.potionStackSize`（默认 64，范围 1~64，设 1 恢复原版），**改动立即生效**——物品的 `maxStackSize` 是 `final` 且注册期就固化，所以用「注册期读桥接字段（初值=默认值）+ 配置就绪后经 Mixin `@Mutable @Accessor` 写入物品实例」两步实现；这也补上了 1.1.1 因注入时机问题而砍掉的那个配置项<br>② 新增**原版风格的图形配置界面**（主菜单 → 模组 → 配置），左侧是分组/配置项可滚动列表 + 搜索框，右侧是该分组的滑块与开关，底部有「保存配置 / 重新载入 / 恢复默认」；布局按可用空间自适应，320×240 也不会重叠<br>③ 界面自带「改动即时生效」语义，关掉界面时未保存的改动会自动落盘 |
 | **1.4.5** | **修复整合包中「其他模组持续赋予效果导致等级极速上叠」**：叠加挂在 `MobEffectInstance#update()` 上，而这是任何模组施加效果都会经过的汇聚点，签名里拿不到来源——此前只要效果相同就叠加，于是每个游戏刻施加一次效果的模组（饰品类很常见）会让等级以 **20 级/秒**冲向 `maxAmplifier` 上限。现新增**来源门控**：只在玩家主动饮用/投掷药水的调用链上叠加，其余来源（饰品、命令、滞留云、生物自主施加）一律走原版「取更强/更久」。新增配置项 `stackTrigger`（默认 `POTION_USE_ONLY`，设 `ALL` 可恢复旧行为）<br>另修复一处门控实现中才暴露的**标记泄漏**：`finishUsingItem` 的 cancel 注入所生成的 `return` 晚于 `@At("RETURN")` 注入，**不会被其覆盖**，导致每次饮用堆叠药水都泄漏一次标记，使随后的外部施加被误判为玩家主动使用——该泄漏本身即可复现出上述失控现象 |
-| **1.4.4** | **修复两处接管原版方法时漏分支导致的回归**（沿用 1.4.2/1.4.3 的方法，逐条对照原版实现后复查全部 Mixin 发现）：<br>① **无限时长的药水会把已有 buff 缩短** —— `MobEffectInstance.update` 里 `this.duration + other.getDuration()` 在 `other.getDuration() == -1`（无限时长）时会算成 `this.duration - 1`，导致「喝一瓶无限时长速度」反而把身上 10 秒的速度变成 9.95 秒。原版此处走 `isShorterDurationThan()`，而该方法内部本就判了 `isInfiniteDuration()`，本模组漏了这一层。现已补上「任一方无限则结果无限」的判定。<br>② **喝药水不再触发幽匿感测体／监守者** —— `PotionItem.finishUsingItem` 末尾的 `user.gameEvent(GameEvent.DRINK)` 在注入点之后，被 `cir.cancel()` 一并吞掉。现已在回调内手动补回该事件。<br>另订正文档：原版 1.20.1 的投掷类药水**本来就没有**使用冷却（已核对字节码），`enableCooldown` 是新增限制而非"恢复原版"，且只对喷溅药水生效 |
+| **1.4.4** | **修复两处接管原版方法时漏分支导致的回归**（沿用 1.4.2/1.4.3 的方法，逐条对照原版实现后复查全部 Mixin 发现）：<br>① **无限时长的药水会把已有 buff 缩短** —— `MobEffectInstance.update` 里 `this.duration + other.getDuration()` 在 `other.getDuration() == -1`（无限时长）时会算成 `this.duration - 1`，导致「喝一瓶无限时长速度」反而把身上 10 秒的速度变成 9.95 秒。原版此处走 `isShorterDurationThan()`，而该方法内部本就判了 `isInfiniteDuration()`，本模组漏了这一层。现已补上「任一方无限则结果无限」的判定。<br>② **喝药水不再触发幽匿感测体／监守者** —— `PotionItem.finishUsingItem` 末尾的 `user.gameEvent(GameEvent.DRINK)` 在注入点之后，被 `cir.cancel()` 一并吞掉。现已在回调内手动补回该事件。<br>另订正文档：原版 1.20.1 的投掷类药水**本来就没有**使用冷却（已核对字节码），`enableCooldown` 是新增限制而非"恢复原版"（当时只对喷溅生效，**1.5.2 起喷溅与滞留都生效**） |
 | **1.4.3** | **修复批量炼制时副产物丢失**：1.4.2 接管 `doBrew` 时漏掉了原版的副产物逻辑——龙息（注册时带 `craftRemainder(GLASS_BOTTLE)`）炼完滞留药水应返还玻璃瓶，原版每瓶返 1 个，批量则应返整批。现补齐，语义与原版一致：材料耗尽时副产物直接占住材料槽，材料有剩则掉落到世界 |
 | **1.4.2** | **修复「放入足量材料后不酿造」**：Forge 的 `BrewingRecipeRegistry.getOutput` 开头即 `if (input.getCount() != 1) return EMPTY`，而 `canBrew`/`hasOutput` 都经由它 —— 于是堆叠药水在 Forge 眼里是"不可酿"的，`isBrewable` 恒为 false，`serverTick` 永远不会把 `brewTime` 置为 400，酿造台完全不启动。现批量时接管 `isBrewable` / `doBrew`，内部用单瓶副本查配方、再把整批瓶数写回产物。同时**取消耗时按批数放大**：原设计把 `brewTime` 放大 64 倍（25600 tick ≈ 21 分钟），而 GUI 进度条分母硬编码为 400，会被算成负数从而完全不可见，看起来就像没在炼 |
 | **1.4.1** | **修复「堆叠药水放不进酿造台」**：原版 `BrewingStandMenu$PotionSlot#getMaxStackSize()` 硬编码返回 1，与物品堆叠上限是两套独立限制——即使药水已是 64 堆叠，槽位仍只收 1 瓶。现由 Mixin 放开槽位容量，新增配置项 `brewing.potionSlotCapacity`（默认 64，设 1 恢复原版）。同时重写 Shift 快捷移动判定：旧实现对源堆只做 `split` 未清空，会残留物品 |

@@ -110,9 +110,9 @@ public class Config {
         builder.comment("使用冷却设置", "Cooldown settings")
                 .push("cooldown");
         enableCooldown = builder
-                .comment("为喷溅药水启用 1 秒（20 tick）使用冷却。默认关闭。",
+                .comment("为投掷类药水（喷溅 / 滞留）启用 1 秒（20 tick）使用冷却。默认关闭。",
                         "注意：原版 1.20.1 的投掷类药水本身没有使用冷却，本项是「新增」而非「恢复」原版限制。",
-                        "当前仅对喷溅药水生效，滞留药水不受影响。")
+                        "1.5.2 起喷溅与滞留都生效；1.5.1 及更早只对喷溅生效。")
                 .translation("stackablepotionsplus.configuration.enableCooldown")
                 .define("enableCooldown", false);
         builder.pop();

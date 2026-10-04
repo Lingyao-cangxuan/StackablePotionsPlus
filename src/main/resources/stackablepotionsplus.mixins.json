@@ -12,6 +12,7 @@
 		"MixinBrewingStandBlockEntity",
 		"MixinBrewingStandMenu",
 		"MixinItems",
+		"MixinLingeringPotionItem",
 		"MixinMobEffectInstance",
 		"MixinPotionItem",
 		"MixinPotionSlot",

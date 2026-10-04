@@ -6,7 +6,7 @@
     "stackablepotionsplus.configuration.stackNegativeEffects": "Stack negative effects",
     "stackablepotionsplus.configuration.enableInstantStacking": "Stack instant effects (heal/damage)",
     "stackablepotionsplus.configuration.instantStackWindowSeconds": "Instant stack window (seconds)",
-    "stackablepotionsplus.configuration.enableCooldown": "Enable 1s use cooldown",
+    "stackablepotionsplus.configuration.enableCooldown": "1s use cooldown for thrown potions",
     "stackablepotionsplus.configuration.stackTrigger": "Stacking trigger source",
     "stackablepotionsplus.configuration.potionSlotCapacity": "Brewing stand potion slot capacity (bottles)",
 
@@ -51,5 +51,5 @@
     "stackablepotionsplus.gui.option.enableInstantStacking": "Stack instant effects",
     "stackablepotionsplus.gui.option.instantStackWindowSeconds": "Instant window (s)",
     "stackablepotionsplus.gui.option.stackTrigger": "Stacking source",
-    "stackablepotionsplus.gui.option.enableCooldown": "Splash use cooldown"
+    "stackablepotionsplus.gui.option.enableCooldown": "Throw cooldown"
 }

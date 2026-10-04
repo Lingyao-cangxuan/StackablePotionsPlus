@@ -6,7 +6,7 @@
     "stackablepotionsplus.configuration.stackNegativeEffects": "负面效果叠加",
     "stackablepotionsplus.configuration.enableInstantStacking": "瞬间效果叠加 (治疗/伤害连发增强)",
     "stackablepotionsplus.configuration.instantStackWindowSeconds": "瞬间效果叠加窗口 (秒)",
-    "stackablepotionsplus.configuration.enableCooldown": "启用 1 秒使用冷却",
+    "stackablepotionsplus.configuration.enableCooldown": "投掷药水启用 1 秒使用冷却",
     "stackablepotionsplus.configuration.stackTrigger": "叠加触发来源",
     "stackablepotionsplus.configuration.potionSlotCapacity": "酿造台药水槽容量 (瓶)",
 
@@ -51,5 +51,5 @@
     "stackablepotionsplus.gui.option.enableInstantStacking": "瞬间效果叠加",
     "stackablepotionsplus.gui.option.instantStackWindowSeconds": "瞬间叠加窗口 (秒)",
     "stackablepotionsplus.gui.option.stackTrigger": "触发来源",
-    "stackablepotionsplus.gui.option.enableCooldown": "喷溅使用冷却"
+    "stackablepotionsplus.gui.option.enableCooldown": "投掷使用冷却"
 }
