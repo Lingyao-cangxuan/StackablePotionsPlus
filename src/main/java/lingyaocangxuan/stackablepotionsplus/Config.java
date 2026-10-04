@@ -6,6 +6,10 @@ import net.minecraftforge.common.ForgeConfigSpec;
 public class Config {
     public static final ForgeConfigSpec SPEC;
 
+    /** Forge 生成的配置文件名（{@code <modid>-<type>.toml}），配置界面用它做「重新载入」。 */
+    public static final String FILE_NAME = "stackablepotionsplus-common.toml";
+
+    public static final ForgeConfigSpec.IntValue potionStackSize;
     public static final ForgeConfigSpec.IntValue maxAmplifier;
     public static final ForgeConfigSpec.IntValue durationCapSeconds;
     public static final ForgeConfigSpec.BooleanValue enableCooldown;
@@ -26,6 +30,19 @@ public class Config {
 
     static {
         ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
+
+        builder.comment("通用设置", "General settings")
+                .push("general");
+        potionStackSize = builder
+                .comment("药水（普通 / 喷溅 / 滞留）的堆叠上限（单位：瓶）。原版硬编码为 1。",
+                        "范围 1 ~ 64。设为 1 即恢复原版「一瓶一组」。",
+                        "改动立即生效：之后新放入 / 新酿造 / 新拾取的药水立即使用新上限；",
+                        "已经在物品栏里的超量堆叠不会被自动拆开，直到被消耗或手动整理。",
+                        "多人服务器请让服务端使用相同数值，否则两端对同一堆叠的合法性判断会不一致。",
+                        "Max stack size for potions. Vanilla is 1.")
+                .translation("stackablepotionsplus.configuration.potionStackSize")
+                .defineInRange("potionStackSize", 64, 1, 64);
+        builder.pop();
 
         builder.comment("酿造台批量炼药设置", "Brewing stand batch settings")
                 .push("brewing");

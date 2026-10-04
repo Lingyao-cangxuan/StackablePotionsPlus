@@ -4,7 +4,7 @@
 
 [简体中文](README.md) | **English**
 
-Minecraft 1.20.1 · Forge mod · v1.4.4
+Minecraft 1.20.1 · Forge mod · v1.5.0
 
 > Mod ID: `stackablepotionsplus` | Based on [Stackable Potions](https://modrinth.com/mod/stackablepotions) by CursedFlames (MIT)
 
@@ -26,13 +26,15 @@ reworks those, and adds the supporting behaviour potion stacking needs:
 
 | | Vanilla | This mod |
 |---|---|---|
-| Potion stack size | 1 bottle | **64 bottles** (regular · splash · lingering) |
+| Potion stack size | 1 bottle | **Up to 64 bottles** (1~64 configurable; regular · splash · lingering) |
 | Re-applying the same effect | Duration refreshed only | **Duration adds up + level increases** |
 | Drinking from a stack | — | **Consumes 1 bottle, returns a glass bottle** |
 | Brewing stand | 1 bottle per slot, one at a time | **64 per slot + whole-batch brewing**, Shift-click moves stacks |
 
-On top of that, the mod is fully configurable: level cap, duration cap, infinite duration, whether
-negative effects take part in stacking, and short-window stacking for instant effects.
+On top of that, the mod is fully configurable: stack size, level cap, duration cap, infinite duration,
+whether negative effects take part in stacking, and short-window stacking for instant effects —
+either in the config file (comments are in Chinese) or in the in-game **graphical config screen**
+(Mods → Stackable Potions Plus → Config).
 
 Built for players and modpacks that want simpler potion logistics, or a "the longer the fight,
 the stronger you get" playstyle.
@@ -43,7 +45,8 @@ the stronger you get" playstyle.
 
 | Feature | Default | Configurable |
 |---|---|---|
-| Potions stack | Up to 64 per stack (vanilla: 1) | Fixed (64) |
+| Potions stack | Up to 64 per stack (vanilla: 1) | ✅ `potionStackSize` (1~64) |
+| **Graphical config screen** | Mods → Config | Fixed |
 | Splash potion use cooldown (optional) | Off (vanilla has none) | ✅ `enableCooldown` |
 | Drinking returns a glass bottle, consumes one bottle | On | Fixed |
 | Brewing stand shift-click support | On | Fixed |
@@ -65,7 +68,7 @@ the stronger you get" playstyle.
 - Minecraft Forge **47.x** (declared as `[46,)`; use 47.1.0+ on 1.20.1)
 - No other dependencies
 
-Drop `StackablePotionsPlus-1.20.1-1.4.5.jar` into your `mods` folder.
+Drop `StackablePotionsPlus-1.20.1-1.5.0.jar` into your `mods` folder.
 
 > ⚠️ **Not compatible with the original mod.** This mod uses its own ID `stackablepotionsplus`.
 > Do **not** install it alongside the original Stackable Potions — both modify `Items` registration
@@ -81,9 +84,40 @@ A config file is generated on first launch:
 config/stackablepotionsplus-common.toml
 ```
 
-Comments in the generated file are written in Chinese. Changes require **restarting the game**.
+Comments in the generated file are written in Chinese. After editing by hand, **restart the game**
+(or hit "Reload" in the config screen).
+
+### Graphical config screen
+
+Besides editing the TOML, the mod ships a vanilla-styled config screen:
+
+**How to open**: main menu (or Esc in-game) → **Mods** → select **Stackable Potions Plus** → **Config**.
+
+The left side lists every option grouped by section (with a search box); the right side shows that
+section's controls — sliders for numbers, click-to-toggle buttons for switches.
+
+| Button | Effect |
+|---|---|
+| Save | Writes the current values back to `config/stackablepotionsplus-common.toml` |
+| Reload | Discards on-screen changes and re-reads the file from disk |
+| Defaults | Resets every option to its factory default (hit Save to write it) |
+
+**Changes apply immediately**: moving a slider writes straight to the runtime value. Stack size in
+particular takes effect at once, no restart needed (see "Why stack size applies instantly" below).
+
+> ⚠️ **Multiplayer**: the config screen changes **your side only**. The potion stack size must match
+> on client and server, otherwise the two sides disagree on whether a given stack is legal — make the
+> server's `config/stackablepotionsplus-common.toml` use the same value.
+
+> Unsaved changes are written to disk automatically when the screen closes, so nothing is lost.
 
 ### Options
+
+#### 0. General (`general`)
+
+| Key | Default | Range | Description |
+|---|---|---|---|
+| `potionStackSize` | `64` | `1 ~ 64` | Stack size for potions (regular / splash / lingering). Vanilla hardcodes 1. Set to `1` to restore vanilla. Applies immediately |
 
 #### 1. Effect stacking (`effect_stacking`)
 
@@ -112,6 +146,20 @@ Comments in the generated file are written in Chinese. Changes require **restart
 ### Default config
 
 ```toml
+[general]
+	#药水（普通 / 喷溅 / 滞留）的堆叠上限（单位：瓶）。原版硬编码为 1。
+	#范围 1 ~ 64。设为 1 即恢复原版「一瓶一组」。
+	#改动立即生效：之后新放入 / 新酿造 / 新拾取的药水立即使用新上限；
+	#已经在物品栏里的超量堆叠不会被自动拆开，直到被消耗或手动整理。
+	#多人服务器请让服务端使用相同数值，否则两端对同一堆叠的合法性判断会不一致。
+	potionStackSize = 64
+
+[brewing]
+	#酿造台每个药水槽的容量上限（单位：瓶）。原版硬编码为 1，这是「堆叠药水放不进去」的直接原因。
+	#药水物品自身的堆叠上限（64）由本模组另行设置，此项独立控制槽位容量。
+	#设为 1 恢复原版行为。
+	potionSlotCapacity = 64
+
 [effect_stacking]
 	maxAmplifier = 4
 	durationCapSeconds = 0
@@ -237,10 +285,33 @@ readable.
 
 ---
 
+### 7. Why stack size applies instantly
+
+An item's stack limit is baked into the `Item` instance's `maxStackSize` field at **registration
+time** (and the field is `final`), so changing only the config file is not enough — which is why
+version 1.1.1 simply removed the stack-size option (the injection ran before the config was loaded,
+so the value could never be read). 1.5.0 works around it in two steps:
+
+1. **At registration**: `Items.<clinit>` changes the three potion items from `stacksTo(1)` to read a
+   bridge field whose **static initial value equals the config default** (64) — so the items are
+   stackable even before any config exists;
+2. **Once the config is ready**: `ModConfigEvent.Loading/Reloading` and every edit in the config
+   screen call `StackSizeApplier`, which writes the configured value into the item instances through
+   a Mixin accessor (`@Mutable @Accessor`).
+
+Since vanilla `ItemStack#getMaxStackSize()` reads the item's field **on every call** (nothing is
+cached), new stacks, pickups, crafting and brewing immediately use the new limit — no restart.
+
+> Shrinking the limit does not split existing stacks. A 64-bottle stack survives lowering the limit
+> to 16; it simply cannot grow, and each split-off stack caps at 16.
+
+---
+
 ## Version history
 
 | Version | Notes |
 |---|---|
+| **1.5.0** | **Added a graphical config screen and a configurable stack size**:<br>① New option `general.potionStackSize` (default 64, range 1~64; `1` restores vanilla) that **applies immediately** — an item's `maxStackSize` is `final` and fixed at registration, so this uses two steps: read a bridge field at registration (initial value = the default), then write the configured value into the item instances via a Mixin `@Mutable @Accessor` once the config is ready. This restores the option 1.1.1 had to drop because of injection timing<br>② New **vanilla-styled graphical config screen** (Mods → Config): a scrollable grouped option list with a search box on the left, sliders and toggles for the selected section on the right, and Save / Reload / Defaults at the bottom. The layout adapts to available space and does not overlap even at 320×240<br>③ Changes take effect immediately, and unsaved changes are written to disk when the screen closes |
 | **1.4.5** | **Fixed runaway effect levels in modpacks where another mod keeps re-applying an effect**: stacking hooks `MobEffectInstance#update()`, the point every mod passes through when applying an effect — its signature carries no information about the source. Previously any matching effect stacked, so a mod applying an effect every game tick (common among trinket mods) pushed the level toward `maxAmplifier` at **20 levels per second**. A **trigger gate** was added: stacking only happens along the player-actively-using-a-potion call chain; every other source (trinkets, commands, lingering clouds, mobs buffing themselves) falls back to vanilla "stronger / longer wins". New option `stackTrigger` (default `POTION_USE_ONLY`; `ALL` restores the old behaviour)<br>Also fixed a **flag leak** that only surfaced while implementing the gate: the `return` generated by the `finishUsingItem` cancel-injection is created *after* the `@At("RETURN")` injection and is therefore **not covered by it**, so every stacked-potion drink leaked one flag, making subsequent external applications look like player-driven use — that leak alone reproduces the runaway behaviour |
 | **1.4.4** | **Fixed two regressions caused by missing branches when taking over vanilla methods** (found by auditing every mixin against the vanilla implementation, the same technique used for 1.4.2/1.4.3):<br>① **Infinite-duration potions shortened existing buffs** — in `MobEffectInstance.update`, `this.duration + other.getDuration()` becomes `this.duration - 1` when `other.getDuration() == -1` (infinite), so drinking an infinite-duration Speed potion turned a 10-second Speed buff into 9.95 seconds. Vanilla routes through `isShorterDurationThan()`, which already checks `isInfiniteDuration()`; that layer was missing. Now "either side infinite ⇒ result infinite" is enforced.<br>② **Drinking potions no longer triggered sculk sensors / wardens** — `user.gameEvent(GameEvent.DRINK)` sits after the injection point in `PotionItem.finishUsingItem` and was swallowed by `cir.cancel()`. The event is now re-emitted inside the callback.<br>Also corrected the docs: vanilla 1.20.1 throwable potions have **no** use cooldown at all (verified against bytecode), so `enableCooldown` adds a restriction rather than restoring one, and it applies to splash potions only |
 | **1.4.3** | **Fixed lost byproducts during batch brewing**: the 1.4.2 `doBrew` takeover missed vanilla's crafting-remainder handling — dragon's breath (registered with `craftRemainder(GLASS_BOTTLE)`) should return a glass bottle per brewed lingering potion, so a batch should return the whole batch. Now restored with vanilla semantics: when the ingredient runs out the byproduct takes over the ingredient slot, otherwise it is dropped into the world |
@@ -251,7 +322,7 @@ readable.
 | **1.3.0** | **Independent mod ID**: `stackablepotions` → `stackablepotionsplus`, package renamed to `lingyaocangxuan.stackablepotionsplus`, display name is now "Stackable Potions Plus". No longer clashes with the original mod's ID. MIT compliance completed: added `LICENSE.txt` (bundled into the jar under `META-INF/`), and `authors` / `credits` now credit both the original author and the porter. **Note: the config file is now `config/stackablepotionsplus-common.toml`; the old file is no longer read** |
 | **1.2.0** | Instant effect short-window stacking (off by default, window configurable) |
 | **1.1.2** | Hard cap of **level 128 (amplifier 127)** for all effect stacking; `maxAmplifier` range narrowed to 0~127 |
-| **1.1.1** | Removed the stack-size config option (it could never work: item registration runs before the config loads, so stack size is now fixed at 64); added numeric level display |
+| **1.1.1** | Removed the stack-size config option (it could never work: item registration runs before the config loads, so stack size was fixed at 64 — **solved in 1.5.0**, stack size is configurable again); added numeric level display |
 | **1.1.0** | Full config support, Chinese comments; `maxAmplifier`, `durationCapSeconds`, `enableCooldown`, `infiniteDuration`, `stackNegativeEffects`; added zh_cn / en_us lang files |
 | **1.0.2** | Effect stacking: duration adds up, level increases up to V |
 | **1.0.1** | Potion stack size 16 → 64 (this entry originally also claimed "removed the 1s cooldown on splash/lingering potions"; vanilla 1.20.1 has no such cooldown, so that claim does not hold — see 1.4.4) |
