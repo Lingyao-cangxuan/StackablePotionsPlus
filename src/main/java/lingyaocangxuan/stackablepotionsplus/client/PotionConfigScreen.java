@@ -13,9 +13,11 @@ import java.util.function.IntFunction;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
-import com.electronwill.nightconfig.core.file.CommentedFileConfig;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import lingyaocangxuan.stackablepotionsplus.Config;
+import lingyaocangxuan.stackablepotionsplus.ConfigFileIO;
 import lingyaocangxuan.stackablepotionsplus.StackSizeApplier;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -26,7 +28,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.fml.loading.FMLPaths;
 
 /**
  * 药水模组配置界面。整体结构对齐原版风格与矿脉重生的界面：
@@ -35,8 +36,12 @@ import net.minecraftforge.fml.loading.FMLPaths;
  * 列表用 scissor 裁剪，行数再多也不会溢出面板。
  * <p>
  * <b>右侧</b>「设置：&lt;分组名&gt;」下面列出该分组的全部控件 —— 数值项是滑块，
- * 开关项是可点击切换的按钮。改动立即写入运行时数值（因此「堆叠数量」拖完就生效），
- * 点「保存配置」写回 {@code config/stackablepotionsplus-common.toml}。
+ * 开关项是可点击切换的按钮。改动会立即写入运行时的配置数值（因此「堆叠数量」拖完松手就生效），
+ * 而 Forge 的配置文件对象带自动保存，所以数值同时也会落盘；
+ * 点「保存配置」是手动的兜底入口，功能上等价于再写一次。
+ * <p>
+ * 注意滑块<b>拖动过程中不写配置</b>，松手才提交一次 —— 否则拖一次滑块会让整个 TOML
+ * 重写几十遍（见 {@link OptionSlider} 的类注释）。
  * <p>
  * <b>底部</b>除了「完成」按钮，还有配置文件路径与生效说明。
  * <p>
@@ -44,6 +49,8 @@ import net.minecraftforge.fml.loading.FMLPaths;
  */
 @OnlyIn(Dist.CLIENT)
 public class PotionConfigScreen extends Screen {
+
+    private static final Logger LOGGER = LogManager.getLogger("stackablepotionsplus-gui");
 
     private static final int PANEL_BG = 0xC0101010;
     private static final int PANEL_BORDER = 0xFF5A5A5A;
@@ -340,7 +347,13 @@ public class PotionConfigScreen extends Screen {
     }
 
     private void save() {
-        Config.SPEC.save();
+        try {
+            Config.SPEC.save();
+        } catch (RuntimeException e) {
+            LOGGER.error("写回配置文件失败", e);
+            this.setStatus(Component.translatable("stackablepotionsplus.gui.status.save_failed"));
+            return;
+        }
         StackSizeApplier.apply();
         this.dirty = false;
         this.setStatus(Component.translatable("stackablepotionsplus.gui.status.saved", Config.FILE_NAME));
@@ -351,26 +364,27 @@ public class PotionConfigScreen extends Screen {
      * <p>
      * 语义是「丢弃界面上的未保存改动，回到文件里的值」—— Forge 自己也会在检测到文件被外部
      * 修改时重载，但那个时机不确定，手动改完 TOML 想立刻生效就用这个按钮。
+     * <p>
+     * 实际读取与校正放在 {@link ConfigFileIO#reloadFromDisk} 里，那里同时说明了
+     * 为什么不能直接用 {@code ForgeConfigSpec#acceptConfig}。
      */
     private void reload() {
-        Path path = FMLPaths.CONFIGDIR.get().resolve(Config.FILE_NAME);
+        Path path = ConfigFileIO.path();
         if (!Files.isRegularFile(path)) {
             this.setStatus(Component.translatable("stackablepotionsplus.gui.status.reload_failed"));
             return;
         }
-        CommentedFileConfig file = CommentedFileConfig.builder(path).build();
         try {
-            file.load();
-            Config.SPEC.acceptConfig(file);
-            StackSizeApplier.apply();
-            syncOptionWidgets();
-            this.dirty = false;
-            this.setStatus(Component.translatable("stackablepotionsplus.gui.status.reloaded"));
-        } catch (Exception e) {
+            ConfigFileIO.reloadFromDisk(path);
+        } catch (RuntimeException e) {
+            LOGGER.error("重新读取配置文件失败", e);
             this.setStatus(Component.translatable("stackablepotionsplus.gui.status.reload_failed"));
-        } finally {
-            file.close();
+            return;
         }
+        StackSizeApplier.apply();
+        syncOptionWidgets();
+        this.dirty = false;
+        this.setStatus(Component.translatable("stackablepotionsplus.gui.status.reloaded"));
     }
 
     private void restoreDefaults() {
@@ -618,9 +632,13 @@ public class PotionConfigScreen extends Screen {
     public void removed() {
         // 关了界面但没点保存：脏改动直接落盘，避免「界面里改了却重启后消失」
         if (this.dirty) {
-            Config.SPEC.save();
-            StackSizeApplier.apply();
-            this.dirty = false;
+            try {
+                Config.SPEC.save();
+                StackSizeApplier.apply();
+                this.dirty = false;
+            } catch (RuntimeException e) {
+                LOGGER.error("关闭界面时写回配置文件失败", e);
+            }
         }
         super.removed();
     }

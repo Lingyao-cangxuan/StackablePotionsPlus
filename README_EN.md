@@ -4,7 +4,7 @@
 
 [简体中文](README.md) | **English**
 
-Minecraft 1.20.1 · Forge mod · v1.5.0
+Minecraft 1.20.1 · Forge mod · v1.5.1
 
 > Mod ID: `stackablepotionsplus` | Based on [Stackable Potions](https://modrinth.com/mod/stackablepotions) by CursedFlames (MIT)
 
@@ -68,7 +68,7 @@ the stronger you get" playstyle.
 - Minecraft Forge **47.x** (declared as `[46,)`; use 47.1.0+ on 1.20.1)
 - No other dependencies
 
-Drop `StackablePotionsPlus-1.20.1-1.5.0.jar` into your `mods` folder.
+Drop `StackablePotionsPlus-1.20.1-1.5.1.jar` into your `mods` folder.
 
 > ⚠️ **Not compatible with the original mod.** This mod uses its own ID `stackablepotionsplus`.
 > Do **not** install it alongside the original Stackable Potions — both modify `Items` registration
@@ -99,11 +99,20 @@ section's controls — sliders for numbers, click-to-toggle buttons for switches
 | Button | Effect |
 |---|---|
 | Save | Writes the current values back to `config/stackablepotionsplus-common.toml` |
-| Reload | Discards on-screen changes and re-reads the file from disk |
-| Defaults | Resets every option to its factory default (hit Save to write it) |
+| Reload | Discards on-screen changes and re-reads the file from disk; out-of-range values in the file are clamped to the legal range with a WARN entry in the log |
+| Defaults | Resets every option to its factory default |
 
-**Changes apply immediately**: moving a slider writes straight to the runtime value. Stack size in
-particular takes effect at once, no restart needed (see "Why stack size applies instantly" below).
+**Changes apply immediately**: releasing a slider or clicking a toggle writes straight to the runtime
+value. Stack size in particular takes effect at once, no restart needed (see "Why stack size applies
+instantly" below).
+
+> Sliders **commit on mouse release**, updating only their label while you drag. Forge's mod config
+> uses an auto-saving `CommentedFileConfig`, so every assignment rewrites the whole TOML — committing on
+> every drag frame would rewrite the file dozens of times per drag.
+>
+> That same auto-save also makes the Save button a manual fallback: values already reach disk as you
+> change them. The button exists as an explicit "write now" affordance, and to surface a write failure
+> in the status line.
 
 > ⚠️ **Multiplayer**: the config screen changes **your side only**. The potion stack size must match
 > on client and server, otherwise the two sides disagree on whether a given stack is legal — make the
@@ -311,6 +320,7 @@ cached), new stacks, pickups, crafting and brewing immediately use the new limit
 
 | Version | Notes |
 |---|---|
+| **1.5.1** | **Fixed two config-screen problems that only show up when you actually click around**:<br>① **After using Reload once, Save stops working forever** — the old implementation called `ForgeConfigSpec#acceptConfig(tempFile)`, which swaps the spec's backing `Config` for the object you pass in. Once that temporary object was `close()`d in a `finally`, the spec's backing config was a closed file, so every later `SPEC.save()` threw `IllegalStateException: Cannot save a closed FileConfig`. Now it reads the temp file, runs `correct()`, and pushes each value back with `set()`, leaving Forge's own config object in place<br>② **Dragging a slider rewrote the whole TOML dozens of times** — Forge's mod config is **auto-saving**, so `ConfigValue#set()` writes the entire file to disk; the slider used to call `set()` on every drag frame. It now **commits once on mouse release**, updating only the label while dragging<br>Also: hand-edited out-of-range values (e.g. `potionStackSize = 200` / `-5`) are clamped to the range bounds (`64` / `1`) on reload with a WARN log, bad enums and wrong types fall back to defaults, and nothing throws. Save and the auto-save on screen close are both wrapped so a write failure reports in the status line instead of crashing |
 | **1.5.0** | **Added a graphical config screen and a configurable stack size**:<br>① New option `general.potionStackSize` (default 64, range 1~64; `1` restores vanilla) that **applies immediately** — an item's `maxStackSize` is `final` and fixed at registration, so this uses two steps: read a bridge field at registration (initial value = the default), then write the configured value into the item instances via a Mixin `@Mutable @Accessor` once the config is ready. This restores the option 1.1.1 had to drop because of injection timing<br>② New **vanilla-styled graphical config screen** (Mods → Config): a scrollable grouped option list with a search box on the left, sliders and toggles for the selected section on the right, and Save / Reload / Defaults at the bottom. The layout adapts to available space and does not overlap even at 320×240<br>③ Changes take effect immediately, and unsaved changes are written to disk when the screen closes |
 | **1.4.5** | **Fixed runaway effect levels in modpacks where another mod keeps re-applying an effect**: stacking hooks `MobEffectInstance#update()`, the point every mod passes through when applying an effect — its signature carries no information about the source. Previously any matching effect stacked, so a mod applying an effect every game tick (common among trinket mods) pushed the level toward `maxAmplifier` at **20 levels per second**. A **trigger gate** was added: stacking only happens along the player-actively-using-a-potion call chain; every other source (trinkets, commands, lingering clouds, mobs buffing themselves) falls back to vanilla "stronger / longer wins". New option `stackTrigger` (default `POTION_USE_ONLY`; `ALL` restores the old behaviour)<br>Also fixed a **flag leak** that only surfaced while implementing the gate: the `return` generated by the `finishUsingItem` cancel-injection is created *after* the `@At("RETURN")` injection and is therefore **not covered by it**, so every stacked-potion drink leaked one flag, making subsequent external applications look like player-driven use — that leak alone reproduces the runaway behaviour |
 | **1.4.4** | **Fixed two regressions caused by missing branches when taking over vanilla methods** (found by auditing every mixin against the vanilla implementation, the same technique used for 1.4.2/1.4.3):<br>① **Infinite-duration potions shortened existing buffs** — in `MobEffectInstance.update`, `this.duration + other.getDuration()` becomes `this.duration - 1` when `other.getDuration() == -1` (infinite), so drinking an infinite-duration Speed potion turned a 10-second Speed buff into 9.95 seconds. Vanilla routes through `isShorterDurationThan()`, which already checks `isInfiniteDuration()`; that layer was missing. Now "either side infinite ⇒ result infinite" is enforced.<br>② **Drinking potions no longer triggered sculk sensors / wardens** — `user.gameEvent(GameEvent.DRINK)` sits after the injection point in `PotionItem.finishUsingItem` and was swallowed by `cir.cancel()`. The event is now re-emitted inside the callback.<br>Also corrected the docs: vanilla 1.20.1 throwable potions have **no** use cooldown at all (verified against bytecode), so `enableCooldown` adds a restriction rather than restoring one, and it applies to splash potions only |
